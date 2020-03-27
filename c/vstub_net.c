@@ -1,5 +1,7 @@
 #include "vstub.h"
 
+#define        TCP_SERV_PORT        3240
+
 #ifndef LINUX
 WORD wVersionRequested = 2;
 WSADATA wsaData;
@@ -46,7 +48,7 @@ recv_data(vstub_t *vstub, char *buf, unsigned len)
 
 	while (nrecvs < len) {
 		if ((nrecv = recv(vstub->sockfd, buf + nrecvs, len - nrecvs, 0)) <= 0) {
-			error("failed to recv: %s \n", strerror(errno));
+			error("failed to recv: %s\n", strerror(errno));
 			return FALSE;
 		}
 		nrecvs += nrecv;
@@ -54,30 +56,26 @@ recv_data(vstub_t *vstub, char *buf, unsigned len)
 	return TRUE;
 }
 
-BOOL
-recv_cmd_submit(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
+USBIP_CMD_SUBMIT *
+recv_cmd_submit(vstub_t *vstub)
 {
+	USBIP_CMD_SUBMIT	*cmd_submit;
+
+	cmd_submit = (USBIP_CMD_SUBMIT *)malloc(sizeof(USBIP_CMD_SUBMIT));
 	if (!recv_data(vstub, (char *)cmd_submit, sizeof(USBIP_CMD_SUBMIT))) {
+		free(cmd_submit);
 		return FALSE;
 	}
 
 	unpack(cmd_submit);
-	return TRUE;
+	return cmd_submit;
 }
 
-BOOL
-send_ret_submit(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit, char *data, unsigned int size, unsigned int status)
+static BOOL
+send_ret_submit(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit, char *data, unsigned int size)
 {
-        ret_submit->command = 0x3;
-        ret_submit->status = status;
+        ret_submit->status = 0;
         ret_submit->actual_length = size;
-        ret_submit->start_frame = 0x0;
-        ret_submit->number_of_packets = 0x0;
-	
-        memset(ret_submit->setup, 0, 8);
-        ret_submit->devid = 0x0;
-	ret_submit->direction = 0x0;
-        ret_submit->ep = 0x0;
 
         pack(ret_submit);
  
@@ -85,13 +83,24 @@ send_ret_submit(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit, char *data, unsign
 		return FALSE;
         }
 
-        if (size > 0) {
-		if (!send_data(vstub, data, size)) {
-			return FALSE;
-		}
+        if (size > 0 && !send_data(vstub, data, size)) {
+		return FALSE;
         }
 
 	return TRUE;
+}
+
+BOOL
+reply_cmd_submit(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit, char *data, unsigned int size)
+{
+	USBIP_RET_SUBMIT	*ret_submit;
+	BOOL	ret;
+
+	ret_submit = create_ret_submit(cmd_submit);
+	ret = send_ret_submit(vstub, ret_submit, data, size);
+	free(ret_submit);
+
+	return ret;
 }
 
 BOOL

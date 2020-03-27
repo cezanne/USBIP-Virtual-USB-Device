@@ -207,18 +207,18 @@ static char	buffer[BSIZE+1];
 static int	bsize = 0;
 
 void
-handle_data(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit)
+handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
-	if (ret_submit->ep == 0x01) {
+	if (cmd_submit->ep == 0x01) {
 		printf("EP1 received \n");
 
-		if (ret_submit->direction == 0) {
+		if (cmd_submit->direction == 0) {
 			//input
 			printf("direction=input\n");
-			if (!recv_data(vstub, (char *)buffer, ret_submit->actual_length))
+			if (!recv_data(vstub, (char *)buffer, cmd_submit->transfer_buffer_length))
 				return;
-			bsize = ret_submit->actual_length;
-			send_ret_submit(vstub, ret_submit, "", 0, 0);
+			bsize = cmd_submit->transfer_buffer_length;
+			reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 			buffer[bsize + 1] = 0; //string terminator
 			printf("received (%s)\n",buffer);
 		}
@@ -226,26 +226,25 @@ handle_data(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit)
 			printf("direction=output\n");
 		}
 		//not supported
-		send_ret_submit(vstub, ret_submit, "", 0, 0);
+		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 		usleep(500);
 	}
-
-	if ((ret_submit->ep == 0x02)) {
+	else if (cmd_submit->ep == 0x02) {
 		printf("EP2 received \n");
 
-		if (ret_submit->direction == 0) {
+		if (cmd_submit->direction == 0) {
 			//input
 			int i;
 
 			printf("direction=input\n");
-			if (!recv_data(vstub, (char *)buffer, ret_submit->actual_length))
+			if (!recv_data(vstub, (char *)buffer, cmd_submit->transfer_buffer_length))
 				return;
-			bsize = ret_submit->actual_length;
-			send_ret_submit(vstub, ret_submit, "", 0, 0);
+			bsize = cmd_submit->transfer_buffer_length;
+			reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 			buffer[bsize + 1] = 0; //string terminator
 			printf("received (%s)\n",buffer);
 			for (i = 0; i < bsize; i++)
-				printf("%02X",(unsigned char)buffer[i]);
+				printf("%02X", (unsigned char)buffer[i]);
 			printf("\n");
 		}
 		else {
@@ -255,15 +254,15 @@ handle_data(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit)
 				int i;
 
 				for (i = 0; i < bsize; i++) //increment received char
-					buffer[i]+=1;
+					buffer[i]++;
 
-				send_ret_submit(vstub, ret_submit, buffer, bsize, 0);
+				reply_cmd_submit(vstub, cmd_submit, buffer, bsize);
 				printf("sending (%s)\n", buffer);
 
 				bsize = 0;
 			}
 			else {
-				send_ret_submit(vstub, ret_submit,"", 0, 0);
+				reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 
 				usleep(500);
 
@@ -285,38 +284,44 @@ LINE_CODING linec;
 unsigned short linecs = 0;
 
 void
-handle_unknown_control(vstub_t *vstub, setup_pkt_t *setup_pkt, USBIP_RET_SUBMIT *ret_submit)
+handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
-        if (setup_pkt->bmRequestType == 0x21) {
-		//Abstract Control Model Requests
-		if (setup_pkt->bRequest == 0x20) {
-			//SET_LINE_CODING
-			printf("SET_LINE_CODING\n");
-			if (!(recv_data(vstub, (char *)&linec, setup_pkt->wLength)))
-				return;
+	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
 
-			send_ret_submit(vstub, ret_submit, "", 0, 0);
-		}
-		if (setup_pkt->bRequest == 0x21) {
-			//GET_LINE_CODING
-			printf("GET_LINE_CODING\n");
-			send_ret_submit(vstub,ret_submit,(char *)&linec,7,0);
-		}
+        if (setup_pkt->bmRequestType != 0x21)
+		return;
 
-		if (setup_pkt->bRequest == 0x22) {
-			//SET_LINE_CONTROL_STATE
-			linecs = setup_pkt->wValue0;
+	//Abstract Control Model Requests
+	switch (setup_pkt->bRequest) {
+	case 0x20:
+		//SET_LINE_CODING
+		printf("SET_LINE_CODING\n");
+		if (!(recv_data(vstub, (char *)&linec, setup_pkt->wLength)))
+			return;
+		
+		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
+		break;
+	case 0x21:
+		//GET_LINE_CODING
+		printf("GET_LINE_CODING\n");
+		reply_cmd_submit(vstub, cmd_submit, (char *)&linec, 7);
+		break;
+	case 0x22:
+		//SET_LINE_CONTROL_STATE
+		linecs = setup_pkt->wValue0;
 
-			printf("SET_LINE_CONTROL_STATE 0x%02X\n", linecs);
-			send_ret_submit(vstub, ret_submit, "", 0, 0);
-		}
-		if (setup_pkt->bRequest == 0x23) {
-			//SEND_BREAK
-			printf("SEND_BREAK\n");
+		printf("SET_LINE_CONTROL_STATE 0x%02X\n", linecs);
+		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
+		break;
+	case 0x23:
+		//SEND_BREAK
+		printf("SEND_BREAK\n");
 
-			send_ret_submit(vstub, ret_submit, "", 0, 0);
-		}
-        }
+		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
+		break;
+	default:
+		break;
+	}
 }
 
 int

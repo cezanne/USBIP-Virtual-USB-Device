@@ -125,7 +125,7 @@ const byte mouse_report[0x34] = {
 };
 
 void
-handle_data(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit)
+handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
         // Sending random mouse data
         // Send data only for 5 seconds
@@ -138,30 +138,32 @@ handle_data(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit)
 		return_val[1] = (char)((((10l * rand()) / RAND_MAX)) - 5);
 		return_val[2] = (char)((((10l * rand()) / RAND_MAX)) - 5);
 		return_val[3] = 0;
-		send_ret_submit(vstub, ret_submit, return_val, 4, 0);
+		reply_cmd_submit(vstub, cmd_submit, return_val, 4);
 		usleep(250000);
 	}
 	count++;
 }
 
 void
-handle_unknown_control(vstub_t *vstub, setup_pkt_t *setup_pkt, USBIP_RET_SUBMIT *ret_submit)
+handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
+	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
+
         if (setup_pkt->bmRequestType == 0x81 &&
 	    setup_pkt->bRequest == 0x6 &&
 	    setup_pkt->wValue1 == 0x22) {
 		// Get Descriptor
 		// send initial report
 		printf("send initial report\n");
-		send_ret_submit(vstub, ret_submit, (char *)mouse_report, 0x34, 0);
+		reply_cmd_submit(vstub, cmd_submit, (char *)mouse_report, 0x34);
 	}
-        if(setup_pkt->bmRequestType == 0x21 &&
-	   setup_pkt->bRequest == 0x0a) {
+        if (setup_pkt->bmRequestType == 0x21 &&
+	    setup_pkt->bRequest == 0x0a) {
 		// Host Request
 		// set idle
 		printf("Idle\n");
 		// Idle
-		send_ret_submit(vstub, ret_submit, "", 0, 0);
+		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 	}
 }
 

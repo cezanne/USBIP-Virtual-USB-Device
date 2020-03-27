@@ -90,88 +90,93 @@ const USB_INTERFACE_DESCRIPTOR *interfaces[]={ &configuration_hid.dev_int };
 const unsigned char *strings[]={};
 const USB_DEVICE_QUALIFIER_DESCRIPTOR  dev_qua={};
 
-
 //Class specific descriptor - HID keyboard
 const byte keyboard_report[0x3F]={
-               0x05, 0x01, 
-	       0x09, 0x06,		//Usage Page (Generic Desktop),
-	       0xA1, 0x01,		//Usage (Keyboard),
-	       0x05, 0x07, 		//Collection (Application),
-	       0x19, 0xE0, 		//Usage Page (Key Codes);
-	       0x29, 0xE7, 		//Usage Minimum (224),
-	       0x15, 0x00, 		//Usage Maximum (231),
-	       0x25, 0x01, 		//Logical Minimum (0),
-	       0x75, 0x01, 		//Logical Maximum (1),
-	       0x95, 0x08, 		//Report Size (1),
-	       0x81, 0x02, 		//Report Count (8),
-	       0x95, 0x01, 		//Input (Data, Variable, Absolute),
-	       0x75, 0x08, 		//Report Count (1),
-	       0x81, 0x01, 		//Report Size (8),
-	       0x95, 0x05, 		//Input (Constant),
-	       0x75, 0x01, 		//Report Count (5),
-	       0x05, 0x08, 		//Report Size (1),
-	       0x19, 0x01, 		//Usage Page (Page# for LEDs),
-	       0x29, 0x05, 		//Usage Minimum (1),
-	       0x91, 0x02, 		//Usage Maximum (5),
-	       0x95, 0x01, 		//Output (Data, Variable, Absolute),
-	       0x75, 0x03, 		//Report Count (1),
-	       0x91, 0x01, 		//Report Size (3),
-	       0x95, 0x06, 		//Output (Constant),
-	       0x75, 0x08, 		//Report Count (6),
-	       0x15, 0x00, 		//Report Size (8),
-	       0x25, 0x65, 		//Logical Minimum (0),
-	       0x05, 0x07, 		//Logical Maximum(101),
-	       0x19, 0x00, 		//Usage Page (Key Codes),
-	       0x29, 0x65, 		//Usage Minimum (0),
-	       0x81, 0x00, 		//Usage Maximum (101), #Input (Data, Array),
-	       0xC0};  			//End Collection 
-
+	0x05, 0x01, 
+	0x09, 0x06,		//Usage Page (Generic Desktop),
+	0xA1, 0x01,		//Usage (Keyboard),
+	0x05, 0x07, 		//Collection (Application),
+	0x19, 0xE0, 		//Usage Page (Key Codes);
+	0x29, 0xE7, 		//Usage Minimum (224),
+	0x15, 0x00, 		//Usage Maximum (231),
+	0x25, 0x01, 		//Logical Minimum (0),
+	0x75, 0x01, 		//Logical Maximum (1),
+	0x95, 0x08, 		//Report Size (1),
+	0x81, 0x02, 		//Report Count (8),
+	0x95, 0x01, 		//Input (Data, Variable, Absolute),
+	0x75, 0x08, 		//Report Count (1),
+	0x81, 0x01, 		//Report Size (8),
+	0x95, 0x05, 		//Input (Constant),
+	0x75, 0x01, 		//Report Count (5),
+	0x05, 0x08, 		//Report Size (1),
+	0x19, 0x01, 		//Usage Page (Page# for LEDs),
+	0x29, 0x05, 		//Usage Minimum (1),
+	0x91, 0x02, 		//Usage Maximum (5),
+	0x95, 0x01, 		//Output (Data, Variable, Absolute),
+	0x75, 0x03, 		//Report Count (1),
+	0x91, 0x01, 		//Report Size (3),
+	0x95, 0x06, 		//Output (Constant),
+	0x75, 0x08, 		//Report Count (6),
+	0x15, 0x00, 		//Report Size (8),
+	0x25, 0x65, 		//Logical Minimum (0),
+	0x05, 0x07, 		//Logical Maximum(101),
+	0x19, 0x00, 		//Usage Page (Key Codes),
+	0x29, 0x65, 		//Usage Minimum (0),
+	0x81, 0x00, 		//Usage Maximum (101), #Input (Data, Array),
+	0xC0
+};  			//End Collection 
 
 void
-handle_data(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit)
+handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
         // Sending random keyboard data
         // Send data only for 5 seconds
-         static int  count=0;
-         char return_val[8];
-
-         printf("data\n");
-         memset(return_val, 0, 8);
-         if (count < 20) {
-		 if((count % 2 ) == 0)
-			 return_val[2] = (char)((((25l*rand())/RAND_MAX))+4);
-		 send_ret_submit(vstub, ret_submit, return_val, 4, 0);
-         } 
-         usleep(250000);
-         count=count+1;
-};
+	static int  count=0;
+	char	return_val[8];
+	
+	printf("data\n");
+	memset(return_val, 0, 8);
+	if (count < 20) {
+		if ((count % 2 ) == 0)
+			return_val[2] = (char)((((25l*rand())/RAND_MAX)) + 4);
+		reply_cmd_submit(vstub, cmd_submit, return_val, 4);
+	}
+	usleep(250000);
+	count++;
+}
 
 void
-handle_unknown_control(vstub_t *vstub, setup_pkt_t *setup_pkt, USBIP_RET_SUBMIT *ret_submit)
+handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
-        if(setup_pkt->bmRequestType == 0x81) { 
-		if (setup_pkt->bRequest == 0x6) {
-			if (setup_pkt->wValue1 == 0x22) { // send initial report
-				printf("send initial report\n");
-				send_ret_submit(vstub, ret_submit, (char *)keyboard_report, 0x3F, 0);
-			}
-		} 
-        } 
-        if (setup_pkt->bmRequestType == 0x21) { // Host Request
+	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
+
+	switch (setup_pkt->bmRequestType) {
+	case 0x81:
+		if (setup_pkt->bRequest == 0x6 && setup_pkt->wValue1 == 0x22) { // send initial report
+			printf("send initial report\n");
+			reply_cmd_submit(vstub, cmd_submit, (char *)keyboard_report, 0x3F);
+		}
+		break;
+	case 0x21:
+		// Host Request
 		if (setup_pkt->bRequest == 0x0a) { // set idle
 			printf("Idle\n");
 			// Idle
-			send_ret_submit(vstub, ret_submit, "", 0, 0);
+			reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 		}
-		if (setup_pkt->bRequest == 0x09) { // set report
+		else if (setup_pkt->bRequest == 0x09) { // set report
+			char	data[20];
+
 			printf("set report\n");
-			char data[20];
-			if (!(recv_data(vstub, data, setup_pkt->wLength))) {
-				printf ("receive error : %s \n", strerror (errno));
+
+			if (!recv_data(vstub, data, setup_pkt->wLength)) {
+				printf ("receive error: %s \n", strerror (errno));
 				return;
 			}
-			send_ret_submit(vstub, ret_submit,"", 0, 0);
+			reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 		}
+	default:
+		break;
         }
 }
 
@@ -181,4 +186,3 @@ main(void)
 	printf("hid keyboard started....\n");
 	usbip_run(&dev_dsc);
 }
-

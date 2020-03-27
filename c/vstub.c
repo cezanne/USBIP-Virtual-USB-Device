@@ -121,72 +121,80 @@ handle_attach(const USB_DEVICE_DESCRIPTOR *dev_dsc, OP_REP_IMPORT *rep)
 	rep->bNumInterfaces = conf->dev_conf.bNumInterfaces;
 }
 
+static void
+handle_get_descriptor_string(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
+{
+	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
+	char	str[255];
+	int	i, len;
+
+	memset(str, 0, 255);
+
+	len = cmd_submit->transfer_buffer_length;
+	if (len > *strings[setup_pkt->wValue0])
+		len = *strings[setup_pkt->wValue0];
+	for (i = 0; i < len / 2 - 1; i++)
+		str[i] = strings[setup_pkt->wValue0][i * 2 + 2];
+
+	printf("get_descriptor_string: %s\n",str);
+	reply_cmd_submit(vstub, cmd_submit, (char *)strings[setup_pkt->wValue0], len);
+}
+
 static BOOL
-handle_get_descriptor(vstub_t *vstub, setup_pkt_t *setup_pkt, USBIP_RET_SUBMIT *ret_submit)
+handle_get_descriptor(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
-	BOOL	handled = FALSE;
-	
-	printf("handle_get_descriptor %u [%u]\n", setup_pkt->wValue1, setup_pkt->wValue0);
-	if (setup_pkt->wValue1 == 0x1) {
+	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
+
+	switch (setup_pkt->wValue1) {
+	case 0x1:
 		// Device
-		printf("Device\n");
-		handled = TRUE;
-		send_ret_submit(vstub, ret_submit, (char *)&dev_dsc, sizeof(USB_DEVICE_DESCRIPTOR), 0);
-	}
-	if (setup_pkt->wValue1 == 0x2) {
+		printf("get_descriptor: Device\n");
+		reply_cmd_submit(vstub, cmd_submit, (char *)&dev_dsc, sizeof(USB_DEVICE_DESCRIPTOR));
+		break;
+	case 0x2:
 		// configuration
-		printf("Configuration\n");
-		handled = TRUE;
-		send_ret_submit(vstub, ret_submit, (char *)configuration, setup_pkt->wLength, 0);
-	}
-	if (setup_pkt->wValue1 == 0x3) {
-		// string
-		char	str[255];
-		int	i, len;
-
-		memset(str, 0, 255);
-
-		len = ret_submit->actual_length;
-		if (len > *strings[setup_pkt->wValue0])
-			len = *strings[setup_pkt->wValue0];
-		for (i = 0; i < len / 2 - 1; i++)
-			str[i] = strings[setup_pkt->wValue0][i * 2 + 2];
-		printf("String (%s)\n",str);
-		handled = TRUE;
-		send_ret_submit(vstub, ret_submit, (char *)strings[setup_pkt->wValue0], len, 0);
-	}
-	if (setup_pkt->wValue1 == 0x6) {
+		printf("get_descriptor: Configuration\n");
+		reply_cmd_submit(vstub, cmd_submit, (char *)configuration, setup_pkt->wLength);
+		break;
+	case 0x3:
+		handle_get_descriptor_string(vstub, cmd_submit);
+		break;
+	case 0x6:
 		// qualifier
-		printf("Qualifier\n");
-		handled = TRUE;
-		send_ret_submit(vstub, ret_submit, (char *)&dev_qua, setup_pkt->wLength, 0);
+		printf("get_descriptor: Qualifier\n");
+		reply_cmd_submit(vstub, cmd_submit, (char *)&dev_qua, setup_pkt->wLength);
+	default:
+		return FALSE;
 	}
-	if (setup_pkt->wValue1 == 0xA) {
-		// config status ???
-		printf("Unknown\n");
-		handled = TRUE;
-		send_ret_submit(vstub, ret_submit,"", 0, 1);
-	}
-	return handled;
+	return TRUE;
 }
 
 static void
-handle_set_configuration(vstub_t *vstub, setup_pkt_t *setup_pkt, USBIP_RET_SUBMIT *ret_submit)
+handle_get_status(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
+	char	data[2];
+
+	data[0] = 0x01;
+	data[1] = 0x00;
+
+	reply_cmd_submit(vstub, cmd_submit, data, 2);
+	printf("GET_STATUS\n");
+}
+
+static void
+handle_set_configuration(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
+{
+	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
+
 	printf("handle_set_configuration %u[%u]\n", setup_pkt->wValue1, setup_pkt->wValue0);
-	send_ret_submit(vstub, ret_submit, "", 0, 0);
+	reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 }
 
-//http://www.usbmadesimple.co.uk/ums_4.htm
-
-static void
-handle_control_transfer(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit)
+static BOOL
+handle_control_transfer_common(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
-        BOOL	handled = FALSE;
-        setup_pkt_t	*setup_pkt;
+	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
 	byte	bmRequestType, bRequest;
-
-	setup_pkt = (setup_pkt_t *)ret_submit->setup;
 
         printf("  UC Request Type %u\n", setup_pkt->bmRequestType);
         printf("  UC Request %u\n", setup_pkt->bRequest);
@@ -200,53 +208,49 @@ handle_control_transfer(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit)
 	switch (bmRequestType) {
 	case 0x80:
 		// Host Request
-		if (bRequest == 0x06) {
-			// Get Descriptor
-			handled = handle_get_descriptor(vstub, setup_pkt, ret_submit);
-		}
-		else if (bRequest == 0x00) {
-			// Get STATUS
-			char data[2];
-			data[0] = 0x01;
-			data[1] = 0x00;
-			send_ret_submit(vstub, ret_submit, data, 2, 0);
-			handled = TRUE;
-			printf("GET_STATUS\n");
+		switch (bRequest) {
+		case 0x06:
+			return handle_get_descriptor(vstub, cmd_submit);
+		case 0x00:
+			handle_get_status(vstub, cmd_submit);
+			return TRUE;
 		}
 		break;
 	case 0x00:
 		if (bRequest == 0x09) {
 			// Set Configuration
-			handle_set_configuration(vstub, setup_pkt, ret_submit);
-			handled = TRUE;
+			handle_set_configuration(vstub, cmd_submit);
+			return TRUE;
 		}
 		break;
 	case 0x01:
 		if (bRequest == 0x0B) {
 			//SET_INTERFACE
 			printf("SET_INTERFACE\n");
-			send_ret_submit(vstub, ret_submit, "", 0, 1);
-			handled = TRUE;
+			reply_cmd_submit(vstub, cmd_submit, NULL, 0);
+			return TRUE;
 		}
 		break;
 	default:
 		break;
-        }
+	}
 
-        if (!handled)
-		handle_unknown_control(vstub, setup_pkt, ret_submit);
+	return FALSE;
 }
 
 static void
-handle_cmd_submit(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit)
+handle_cmd_submit(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
-	if (ret_submit->ep == 0) {
+	if (cmd_submit->ep == 0) {
 		printf("#control requests\n");
-		handle_control_transfer(vstub, ret_submit);
+
+		if (handle_control_transfer_common(vstub, cmd_submit))
+			return;
+		handle_control_transfer(vstub, cmd_submit);
 	}
 	else {
-		printf("#data requests\n");
-		handle_data(vstub, ret_submit);
+		printf("#non-control requests\n");
+		handle_non_control_transfer(vstub, cmd_submit);
 	}
 }
 
@@ -345,43 +349,32 @@ show_cmd_submit(USBIP_CMD_SUBMIT *cmd_submit)
 static BOOL
 handle_attached(vstub_t *vstub)
 {
-	USBIP_CMD_SUBMIT	cmdSubmit;
-	USBIP_RET_SUBMIT	retSubmit;
+	USBIP_CMD_SUBMIT	*cmd_submit;
+	BOOL	ret = TRUE;
 
 	printf("------------------------------------------------\n"); 
 	printf("handles requests\n");
 
-	if (!recv_cmd_submit(vstub, &cmdSubmit))
+	if ((cmd_submit = recv_cmd_submit(vstub)) == NULL)
 		return FALSE;
 
-	show_cmd_submit(&cmdSubmit);
-	
-	retSubmit.command = 0;
-	retSubmit.seqnum = cmdSubmit.seqnum;
-	retSubmit.devid = cmdSubmit.devid;
-	retSubmit.direction = cmdSubmit.direction;
-	retSubmit.ep = cmdSubmit.ep;
-	retSubmit.status = 0;
-	retSubmit.actual_length = cmdSubmit.transfer_buffer_length;
-	retSubmit.start_frame = 0;
-	retSubmit.number_of_packets = 0;
-	retSubmit.error_count = 0;
-	memcpy(retSubmit.setup, cmdSubmit.setup, 8);
+	show_cmd_submit(cmd_submit);
 
-	switch (cmdSubmit.command) {
+	switch (cmd_submit->command) {
 	case 1:
-		handle_cmd_submit(vstub, &retSubmit);
+		handle_cmd_submit(vstub, cmd_submit);
 		break;
 	case 2:
 		//unlink urb
-		printf("####################### Unlink URB %u  (not working!!!)\n", cmdSubmit.transfer_flags);
+		printf("####################### Unlink URB %u  (not working!!!)\n", cmd_submit->transfer_flags);
 		break;
 	default:
-		printf("Unknown USBIP cmd: %d\n", cmdSubmit.command);
-		return FALSE;
+		printf("Unknown USBIP cmd: %d\n", cmd_submit->command);
+		ret = FALSE;
 	}
 
-	return TRUE;
+	free(cmd_submit);
+	return ret;
 }
 
 void

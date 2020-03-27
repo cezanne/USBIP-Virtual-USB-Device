@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -g -Wall -DLINUX 
 PROGS = hid-mouse hid-keyboard cdc-acm
-COMMONS = vstub.o vstub_net.o
+COMMONS = vstub.o vstub_net.o usbip_pkt.o
 
 all:	${PROGS}
 

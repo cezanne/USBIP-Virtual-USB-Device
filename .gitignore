@@ -1,0 +1,5 @@
+*~
+*.o
+/c/cdc-acm
+/c/hid-keyboard
+/c/hid-mouse

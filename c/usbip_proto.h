@@ -23,32 +23,6 @@
    For e-mail suggestions :  lcgamboa@yahoo.com
    ######################################################################## */
 
-#ifdef LINUX
-#include<sys/types.h>
-#include<sys/socket.h>
-#include<sys/un.h>
-#include<netinet/in.h>
-#include<arpa/inet.h>
-#define        min(a,b)        ((a) < (b) ? (a) : (b))
-#else
-#include <winsock.h>
-#endif
-//system headers independent
-#include<errno.h>
-#include<stdarg.h>
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<unistd.h>
-//defines
-#define        TCP_SERV_PORT        3240
-typedef struct sockaddr sockaddr;
-
-#ifdef LINUX
-typedef int	BOOL;
-#define TRUE	1
-#define FALSE	0
-#endif
 
 //USB definitions
 
@@ -81,7 +55,6 @@ typedef struct __attribute__ ((__packed__)) _USB_DEVICE_DESCRIPTOR
 	byte iSerialNumber;         // Index of String Descriptor with the device's serial number.
 	byte bNumConfigurations;    // Number of possible configurations.
 } USB_DEVICE_DESCRIPTOR;
-
 
 typedef struct __attribute__ ((__packed__)) _USB_CONFIGURATION_DESCRIPTOR
 {
@@ -312,7 +285,7 @@ typedef struct  __attribute__ ((__packed__)) _USBIP_CMD_SUBMIT
 	int	start_frame;
 	int	number_of_packets;
 	int	interval;
-	long long	setup;
+	byte	setup[8];
 } USBIP_CMD_SUBMIT;
 
 /*
@@ -340,7 +313,7 @@ typedef struct  __attribute__ ((__packed__)) _USBIP_RET_SUBMIT
 	int	start_frame;
 	int	number_of_packets;
 	int	error_count; 
-	long long	setup;
+	byte	setup[8];
 } USBIP_RET_SUBMIT;
 
 typedef struct  __attribute__ ((__packed__)) _USBIP_CMD_UNLINK
@@ -353,7 +326,7 @@ typedef struct  __attribute__ ((__packed__)) _USBIP_CMD_UNLINK
 	int	seqnum_urb;
 } USBIP_CMD_UNLINK;
 
-typedef struct  __attribute__ ((__packed__)) _USBIP_RET_UNLINK
+typedef struct __attribute__ ((__packed__)) _USBIP_RET_UNLINK
 {
 	int	command;
 	int	seqnum;
@@ -363,7 +336,7 @@ typedef struct  __attribute__ ((__packed__)) _USBIP_RET_UNLINK
 	int	status;
 } USBIP_RET_UNLINK;
 
-typedef struct  __attribute__ ((__packed__)) _StandardDeviceRequest
+typedef struct __attribute__ ((__packed__))
 {
 	byte	bmRequestType;
 	byte	bRequest;
@@ -372,17 +345,4 @@ typedef struct  __attribute__ ((__packed__)) _StandardDeviceRequest
 	byte	wIndex0;
 	byte	wIndex1;
 	word	wLength;
-} StandardDeviceRequest;
-
-void send_usb_req(int sockfd, USBIP_RET_SUBMIT * usb_req, char * data, unsigned int size, unsigned int status);
-void usbip_run (const USB_DEVICE_DESCRIPTOR *dev_dsc);
-
-//implemented by user
-extern const USB_DEVICE_DESCRIPTOR dev_dsc;
-extern const USB_DEVICE_QUALIFIER_DESCRIPTOR  dev_qua;
-extern const char * configuration;
-extern const USB_INTERFACE_DESCRIPTOR *interfaces[];
-extern const unsigned char *strings[];
-
-void handle_data(int sockfd, USBIP_RET_SUBMIT *usb_req, int bl);
-void handle_unknown_control(int sockfd, StandardDeviceRequest * control_req, USBIP_RET_SUBMIT *usb_req);
+} setup_pkt_t;

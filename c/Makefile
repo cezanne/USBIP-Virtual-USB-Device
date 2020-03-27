@@ -1,19 +1,20 @@
-CC=gcc
-CFLAGS= -g -Wall -DLINUX 
-PROGS= hid-mouse hid-keyboard cdc-acm
+CC = gcc
+CFLAGS = -g -Wall -DLINUX 
+PROGS = hid-mouse hid-keyboard cdc-acm
+COMMONS = vstub.o vstub_net.o
 
 all:	${PROGS}
 
-hid-mouse:	usbip.c hid-mouse.c 
-		${CC} ${CFLAGS} usbip.c -c 
-		${CC} ${CFLAGS} usbip.o hid-mouse.c -o hid-mouse 
+hid-mouse: $(COMMONS) hid-mouse.o
+	$(CC) -o $@ $^
 
-hid-keyboard:	usbip.c hid-keyboard.c 
-		${CC} ${CFLAGS} usbip.c -c 
-		${CC} ${CFLAGS} usbip.o hid-keyboard.c -o hid-keyboard
+hid-keyboard: $(COMMONS) hid-keyboard.o
+	$(CC) -o $@ $^
 
-cdc-acm:	usbip.c cdc-acm.c 
-		${CC} ${CFLAGS} usbip.c -c 
-		${CC} ${CFLAGS} usbip.o cdc-acm.c -o cdc-acm
+cdc-acm: $(COMMONS) cdc-acm.o
+	$(CC) -o $@ $^
+
+$(COMMONS): vstub.h usbip_proto.h
+
 clean:
-		rm -f ${PROGS} core core.* *.o temp.* *.out typescript*
+	rm -f ${PROGS} core core.* *.o temp.* *.out typescript*

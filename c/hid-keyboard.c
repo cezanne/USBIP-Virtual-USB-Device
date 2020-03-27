@@ -23,11 +23,7 @@
    For e-mail suggestions :  lcgamboa@yahoo.com
    ######################################################################## */
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include "usbip.h"
+#include "vstub.h"
 
 /* Device Descriptor */
 const USB_DEVICE_DESCRIPTOR dev_dsc=
@@ -131,62 +127,58 @@ const byte keyboard_report[0x3F]={
 	       0xC0};  			//End Collection 
 
 
-void handle_data(int sockfd, USBIP_RET_SUBMIT *usb_req, int bl)
+void
+handle_data(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit)
 {
         // Sending random keyboard data
         // Send data only for 5 seconds
          static int  count=0;
-         char return_val[8]; 
+         char return_val[8];
+
          printf("data\n");
-         memset(return_val,0,8);
-         if (count < 20)
-         {
-            if((count % 2 ) == 0)
-              return_val[2]=(char)((((25l*rand())/RAND_MAX))+4);
-            send_usb_req(sockfd, usb_req, return_val, 4, 0);
+         memset(return_val, 0, 8);
+         if (count < 20) {
+		 if((count % 2 ) == 0)
+			 return_val[2] = (char)((((25l*rand())/RAND_MAX))+4);
+		 send_ret_submit(vstub, ret_submit, return_val, 4, 0);
          } 
          usleep(250000);
          count=count+1;
 };
 
-void handle_unknown_control(int sockfd, StandardDeviceRequest * control_req, USBIP_RET_SUBMIT *usb_req)
+void
+handle_unknown_control(vstub_t *vstub, setup_pkt_t *setup_pkt, USBIP_RET_SUBMIT *ret_submit)
 {
-        if(control_req->bmRequestType == 0x81)
-        { 
-          if(control_req->bRequest == 0x6)  //# Get Descriptor
-          {
-            if(control_req->wValue1 == 0x22)  // send initial report
-            {
-              printf("send initial report\n");
-              send_usb_req(sockfd,usb_req,(char *) keyboard_report, 0x3F, 0);
-            }
-          } 
+        if(setup_pkt->bmRequestType == 0x81) { 
+		if (setup_pkt->bRequest == 0x6) {
+			if (setup_pkt->wValue1 == 0x22) { // send initial report
+				printf("send initial report\n");
+				send_ret_submit(vstub, ret_submit, (char *)keyboard_report, 0x3F, 0);
+			}
+		} 
         } 
-        if(control_req->bmRequestType == 0x21)  // Host Request
-        {
-            if(control_req->bRequest == 0x0a)  // set idle
-            { 
-                printf("Idle\n");
-                // Idle
-                send_usb_req(sockfd,usb_req,"",0,0);
-            }
-            if(control_req->bRequest == 0x09)  // set report
-            { 
-                printf("set report\n");
-                char data[20];
-                if ((recv (sockfd, data , control_req->wLength, 0)) != control_req->wLength)
-                {
-                   printf ("receive error : %s \n", strerror (errno));
-                   exit(-1);
-                };
-                send_usb_req(sockfd,usb_req,"",0,0);
-            }
-        }    
-};
+        if (setup_pkt->bmRequestType == 0x21) { // Host Request
+		if (setup_pkt->bRequest == 0x0a) { // set idle
+			printf("Idle\n");
+			// Idle
+			send_ret_submit(vstub, ret_submit, "", 0, 0);
+		}
+		if (setup_pkt->bRequest == 0x09) { // set report
+			printf("set report\n");
+			char data[20];
+			if (!(recv_data(vstub, data, setup_pkt->wLength))) {
+				printf ("receive error : %s \n", strerror (errno));
+				return;
+			}
+			send_ret_submit(vstub, ret_submit,"", 0, 0);
+		}
+        }
+}
 
-int main()
+int
+main(void)
 {
-   printf("hid keyboard started....\n");
-   usbip_run(&dev_dsc);
+	printf("hid keyboard started....\n");
+	usbip_run(&dev_dsc);
 }
 

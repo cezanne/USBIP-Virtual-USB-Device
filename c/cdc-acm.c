@@ -23,11 +23,7 @@
    For e-mail suggestions :  lcgamboa@yahoo.com
    ######################################################################## */
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include "usbip.h"
+#include "vstub.h"
 
 /* Device Descriptor */
 const USB_DEVICE_DESCRIPTOR dev_dsc=
@@ -207,42 +203,46 @@ const unsigned char *strings[] = {string_0, string_1, string_2, string_3};
 
 #define BSIZE 64
 
-char buffer[BSIZE+1];
-int  bsize=0;
+static char	buffer[BSIZE+1];
+static int	bsize = 0;
 
 void
-handle_data(int sockfd, USBIP_RET_SUBMIT *usb_req, int bl)
+handle_data(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit)
 {
-	if (usb_req->ep == 0x01) {
+	if (ret_submit->ep == 0x01) {
 		printf("EP1 received \n");
 
-		if (usb_req->direction == 0) {
+		if (ret_submit->direction == 0) {
 			//input
 			printf("direction=input\n");
-			bsize = recv(sockfd, (char *) buffer , bl, 0);
-			send_usb_req(sockfd, usb_req,"", 0, 0);
-			buffer[bsize+1] = 0; //string terminator
+			if (!recv_data(vstub, (char *)buffer, ret_submit->actual_length))
+				return;
+			bsize = ret_submit->actual_length;
+			send_ret_submit(vstub, ret_submit, "", 0, 0);
+			buffer[bsize + 1] = 0; //string terminator
 			printf("received (%s)\n",buffer);
 		}
 		else {
 			printf("direction=output\n");
 		}
 		//not supported
-		send_usb_req(sockfd, usb_req, "", 0, 0);
+		send_ret_submit(vstub, ret_submit, "", 0, 0);
 		usleep(500);
 	}
 
-	if ((usb_req->ep == 0x02)) {
+	if ((ret_submit->ep == 0x02)) {
 		printf("EP2 received \n");
 
-		if (usb_req->direction == 0) {
+		if (ret_submit->direction == 0) {
 			//input
 			int i;
 
 			printf("direction=input\n");
-			bsize = recv (sockfd, (char *)buffer , bl, 0);
-			send_usb_req(sockfd, usb_req,"", 0, 0);
-			buffer[bsize+1] = 0; //string terminator
+			if (!recv_data(vstub, (char *)buffer, ret_submit->actual_length))
+				return;
+			bsize = ret_submit->actual_length;
+			send_ret_submit(vstub, ret_submit, "", 0, 0);
+			buffer[bsize + 1] = 0; //string terminator
 			printf("received (%s)\n",buffer);
 			for (i = 0; i < bsize; i++)
 				printf("%02X",(unsigned char)buffer[i]);
@@ -257,13 +257,13 @@ handle_data(int sockfd, USBIP_RET_SUBMIT *usb_req, int bl)
 				for (i = 0; i < bsize; i++) //increment received char
 					buffer[i]+=1;
 
-				send_usb_req(sockfd, usb_req, buffer, bsize, 0);
-				printf("sending (%s)\n",buffer);
+				send_ret_submit(vstub, ret_submit, buffer, bsize, 0);
+				printf("sending (%s)\n", buffer);
 
-				bsize=0;
+				bsize = 0;
 			}
 			else {
-				send_usb_req(sockfd, usb_req,"", 0, 0);
+				send_ret_submit(vstub, ret_submit,"", 0, 0);
 
 				usleep(500);
 
@@ -285,39 +285,36 @@ LINE_CODING linec;
 unsigned short linecs = 0;
 
 void
-handle_unknown_control(int sockfd, StandardDeviceRequest *control_req, USBIP_RET_SUBMIT *usb_req)
+handle_unknown_control(vstub_t *vstub, setup_pkt_t *setup_pkt, USBIP_RET_SUBMIT *ret_submit)
 {
-        if (control_req->bmRequestType == 0x21) {
+        if (setup_pkt->bmRequestType == 0x21) {
 		//Abstract Control Model Requests
-		if (control_req->bRequest == 0x20) {
+		if (setup_pkt->bRequest == 0x20) {
 			//SET_LINE_CODING
 			printf("SET_LINE_CODING\n");
-			if ((recv (sockfd, (char *) &linec , control_req->wLength, 0)) != control_req->wLength) {
-				printf ("receive error : %s \n", strerror (errno));
+			if (!(recv_data(vstub, (char *)&linec, setup_pkt->wLength)))
+				return;
 
-				exit(-1);
-			}
-
-			send_usb_req(sockfd,usb_req,"",0,0);
+			send_ret_submit(vstub, ret_submit, "", 0, 0);
 		}
-		if (control_req->bRequest == 0x21) {
+		if (setup_pkt->bRequest == 0x21) {
 			//GET_LINE_CODING
 			printf("GET_LINE_CODING\n");
-			send_usb_req(sockfd,usb_req,(char *)&linec,7,0);
+			send_ret_submit(vstub,ret_submit,(char *)&linec,7,0);
 		}
 
-		if (control_req->bRequest == 0x22) {
+		if (setup_pkt->bRequest == 0x22) {
 			//SET_LINE_CONTROL_STATE
-			linecs = control_req->wValue0;
+			linecs = setup_pkt->wValue0;
 
 			printf("SET_LINE_CONTROL_STATE 0x%02X\n", linecs);
-			send_usb_req(sockfd,usb_req,"",0,0);
+			send_ret_submit(vstub, ret_submit, "", 0, 0);
 		}
-		if (control_req->bRequest == 0x23) {
+		if (setup_pkt->bRequest == 0x23) {
 			//SEND_BREAK
 			printf("SEND_BREAK\n");
 
-			send_usb_req(sockfd,usb_req,"",0,0);
+			send_ret_submit(vstub, ret_submit, "", 0, 0);
 		}
         }
 }

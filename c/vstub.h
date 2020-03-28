@@ -39,6 +39,7 @@ typedef struct {
 void error(const char *fmt, ...);
 
 USBIP_RET_SUBMIT *create_ret_submit(USBIP_CMD_SUBMIT *cmd_submit);
+USBIP_CMD_SUBMIT *clone_cmd_submit(USBIP_CMD_SUBMIT *cmd_submit);
 
 BOOL send_data(vstub_t *vstub, char *buf, unsigned len);
 BOOL recv_data(vstub_t *vstub, char *buf, unsigned len);

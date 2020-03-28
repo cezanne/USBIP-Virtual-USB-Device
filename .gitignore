@@ -1,5 +1,6 @@
 *~
 *.o
 /c/cdc-acm
+/c/bth
 /c/hid-keyboard
 /c/hid-mouse

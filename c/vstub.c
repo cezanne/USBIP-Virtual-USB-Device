@@ -174,7 +174,7 @@ handle_get_status(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	char	data[2];
 
-	data[0] = 0x01;
+	data[0] = 0x00;
 	data[1] = 0x00;
 
 	reply_cmd_submit(vstub, cmd_submit, data, 2);
@@ -392,12 +392,11 @@ usbip_run(const USB_DEVICE_DESCRIPTOR *dev_dsc)
 			if (!vStub.attached)
 				handle_unattached(&vStub, dev_dsc);
 			else {
-				if (handle_attached(&vStub) < 0) {
+				if (!handle_attached(&vStub))
 					break;
-				}
 			}
 		}
-		
+
 		close_vstub(&vStub);
 	}
 

@@ -21,3 +21,13 @@ create_ret_submit(USBIP_CMD_SUBMIT *cmd_submit)
 
 	return ret_submit;
 }
+
+USBIP_CMD_SUBMIT *
+clone_cmd_submit(USBIP_CMD_SUBMIT *cmd_submit)
+{
+	USBIP_CMD_SUBMIT	*cloned;
+
+	cloned = (USBIP_CMD_SUBMIT *)malloc(sizeof(USBIP_CMD_SUBMIT));
+	memcpy(cloned, cmd_submit, sizeof(USBIP_CMD_SUBMIT));
+	return cloned;
+}

@@ -38,28 +38,6 @@ error(const char *fmt, ...)
 	printf("error: %s\n", buf);
 }
 
-#ifdef _DEBUG
-void
-print_recv(char *buff, int size, const char *desc)
-{
-	int	i,j;
-    
-	printf("----------recv  %s (%i)-----------\n",desc,size);
-            
-	j = 1;
-	for (i = 0; i < size; i++) {
-		printf("0x%02X ", (unsigned char)buff[i]);
-		if (j > 7) {
-			printf("\n"); 
-			j = 0;
-		}
-		j++;
-	}
-           
-	printf("\n-------------------------\n");
-}
-#endif
-
 static void
 handle_device_list(const USB_DEVICE_DESCRIPTOR *dev_dsc, OP_REP_DEVLIST *list)
 {
@@ -131,13 +109,13 @@ handle_get_descriptor_string(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 	memset(str, 0, 255);
 
 	len = cmd_submit->transfer_buffer_length;
-	if (len > *strings[setup_pkt->wValue0])
-		len = *strings[setup_pkt->wValue0];
+	if (len > *strings[setup_pkt->wValue.W])
+		len = *strings[setup_pkt->wValue.W];
 	for (i = 0; i < len / 2 - 1; i++)
-		str[i] = strings[setup_pkt->wValue0][i * 2 + 2];
+		str[i] = strings[setup_pkt->wValue.W][i * 2 + 2];
 
-	printf("get_descriptor_string: %s\n",str);
-	reply_cmd_submit(vstub, cmd_submit, (char *)strings[setup_pkt->wValue0], len);
+	printf(" get_descriptor_string: %s\n",str);
+	reply_cmd_submit(vstub, cmd_submit, (char *)strings[setup_pkt->wValue.W], len);
 }
 
 static BOOL
@@ -145,15 +123,15 @@ handle_get_descriptor(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
 
-	switch (setup_pkt->wValue1) {
+	switch (setup_pkt->wValue.hiByte) {
 	case 0x1:
 		// Device
-		printf("get_descriptor: Device\n");
+		printf(" get_descriptor: Device\n");
 		reply_cmd_submit(vstub, cmd_submit, (char *)&dev_dsc, sizeof(USB_DEVICE_DESCRIPTOR));
 		break;
 	case 0x2:
 		// configuration
-		printf("get_descriptor: Configuration\n");
+		printf(" get_descriptor: Configuration\n");
 		reply_cmd_submit(vstub, cmd_submit, (char *)configuration, setup_pkt->wLength);
 		break;
 	case 0x3:
@@ -161,7 +139,7 @@ handle_get_descriptor(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		break;
 	case 0x6:
 		// qualifier
-		printf("get_descriptor: Qualifier\n");
+		printf(" get_descriptor: Qualifier\n");
 		reply_cmd_submit(vstub, cmd_submit, (char *)&dev_qua, setup_pkt->wLength);
 	default:
 		return FALSE;
@@ -186,7 +164,7 @@ handle_set_configuration(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
 
-	printf("handle_set_configuration %u[%u]\n", setup_pkt->wValue1, setup_pkt->wValue0);
+	printf(" handle_set_configuration: %hu\n", setup_pkt->wValue.W);
 	reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 }
 
@@ -195,12 +173,6 @@ handle_control_transfer_common(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
 	byte	bmRequestType, bRequest;
-
-        printf("  UC Request Type %u\n", setup_pkt->bmRequestType);
-        printf("  UC Request %u\n", setup_pkt->bRequest);
-        printf("  UC Value  %u[%u]\n", setup_pkt->wValue1, setup_pkt->wValue0);
-        printf("  UCIndex  %u-%u\n", setup_pkt->wIndex1, setup_pkt->wIndex0);
-        printf("  UC Length %u\n", setup_pkt->wLength);
 
 	bmRequestType = setup_pkt->bmRequestType;
 	bRequest = setup_pkt->bRequest;
@@ -242,14 +214,11 @@ static void
 handle_cmd_submit(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	if (cmd_submit->ep == 0) {
-		printf("#control requests\n");
-
 		if (handle_control_transfer_common(vstub, cmd_submit))
 			return;
 		handle_control_transfer(vstub, cmd_submit);
 	}
 	else {
-		printf("#non-control requests\n");
 		handle_non_control_transfer(vstub, cmd_submit);
 	}
 }
@@ -259,7 +228,7 @@ handle_unattached_devlist(vstub_t *vstub, const USB_DEVICE_DESCRIPTOR *dev_dsc)
 {
 	OP_REP_DEVLIST	list;
 
-	printf("list of devices\n");
+	printf("list devices\n");
 
 	handle_device_list(dev_dsc, &list);
 
@@ -273,6 +242,7 @@ handle_unattached_devlist(vstub_t *vstub, const USB_DEVICE_DESCRIPTOR *dev_dsc)
 		return FALSE;
 
 	free(list.interfaces);
+
 	return TRUE;
 }
 
@@ -283,12 +253,10 @@ handle_unattached_import(vstub_t *vstub, const USB_DEVICE_DESCRIPTOR *dev_dsc)
 	OP_REP_IMPORT	rep;
 	
 	printf("attach device\n");
+
 	if (!recv_data(vstub, busid, 32)) {
 		return FALSE;
 	}
-#ifdef _DEBUG
-	print_recv(busid, 32, "Busid");
-#endif
 	handle_attach(dev_dsc, &rep);
 	if (!send_data(vstub, (char *)&rep, sizeof(OP_REP_IMPORT))) {
 		return FALSE;
@@ -305,14 +273,7 @@ handle_unattached(vstub_t *vstub, const USB_DEVICE_DESCRIPTOR *dev_dsc)
 	if (!recv_data(vstub, (char *)&req, sizeof(OP_REQ_DEVLIST)))
 		return FALSE;
 
-#ifdef _DEBUG
-	print_recv((char *)&req, sizeof(OP_REQ_DEVLIST), "OP_REQ_DEVLIST");
-#endif
-
 	req.command = ntohs(req.command);
-
-	printf("Header Packet\n");
-	printf("command: 0x%02X\n", req.command);
 
 	switch (req.command) {
 	case 0x8005:
@@ -327,23 +288,18 @@ handle_unattached(vstub_t *vstub, const USB_DEVICE_DESCRIPTOR *dev_dsc)
 static void
 show_cmd_submit(USBIP_CMD_SUBMIT *cmd_submit)
 {
+	unsigned short	ep;
 	int	i;
 
-	printf("usbip cmd %u\n", cmd_submit->command);
-	printf("usbip seqnum %u\n", cmd_submit->seqnum);
-	printf("usbip devid %u\n", cmd_submit->devid);
-	printf("usbip direction %u\n", cmd_submit->direction);
-	printf("usbip ep %u\n", cmd_submit->ep);
-	printf("usbip flags %u\n", cmd_submit->transfer_flags);
-	printf("usbip number of packets %u\n", cmd_submit->number_of_packets);
-	printf("usbip interval %u\n", cmd_submit->interval);
-
-	printf("usbip setup :");
+	ep = cmd_submit->ep;
+	if (cmd_submit->direction)
+		ep |= 0x80;
+	printf("CMD_SUBMIT[%04d] ep:%0hx len: %d, ", cmd_submit->seqnum, ep, cmd_submit->transfer_buffer_length);
+	printf("setup:");
 	for (i = 0; i < 8; i++)
 		printf("%02hhx", cmd_submit->setup[i]);
-	printf("\n");
 
-	printf("usbip buffer length  %u\n", cmd_submit->transfer_buffer_length);
+	printf(", devid:%x, flags:%x, np:%d, intv:%d\n", cmd_submit->devid, cmd_submit->transfer_flags, cmd_submit->number_of_packets, cmd_submit->interval);
 }
 
 static BOOL
@@ -351,9 +307,6 @@ handle_attached(vstub_t *vstub)
 {
 	USBIP_CMD_SUBMIT	*cmd_submit;
 	BOOL	ret = TRUE;
-
-	printf("------------------------------------------------\n"); 
-	printf("handles requests\n");
 
 	if ((cmd_submit = recv_cmd_submit(vstub)) == NULL)
 		return FALSE;
@@ -369,7 +322,7 @@ handle_attached(vstub_t *vstub)
 		printf("####################### Unlink URB %u  (not working!!!)\n", cmd_submit->transfer_flags);
 		break;
 	default:
-		printf("Unknown USBIP cmd: %d\n", cmd_submit->command);
+		error("Unknown USBIP cmd: %d\n", cmd_submit->command);
 		ret = FALSE;
 	}
 

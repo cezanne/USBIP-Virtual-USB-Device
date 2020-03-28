@@ -152,7 +152,7 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 
 	switch (setup_pkt->bmRequestType) {
 	case 0x81:
-		if (setup_pkt->bRequest == 0x6 && setup_pkt->wValue1 == 0x22) { // send initial report
+		if (setup_pkt->bRequest == 0x6 && setup_pkt->wValue.hiByte == 0x22) { // send initial report
 			printf("send initial report\n");
 			reply_cmd_submit(vstub, cmd_submit, (char *)keyboard_report, 0x3F);
 		}

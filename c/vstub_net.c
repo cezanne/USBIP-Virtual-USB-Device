@@ -71,11 +71,25 @@ recv_cmd_submit(vstub_t *vstub)
 	return cmd_submit;
 }
 
+static void
+show_ret_submit(USBIP_RET_SUBMIT *ret_submit)
+{
+	unsigned short	ep;
+
+	ep = ret_submit->ep;
+	if (ret_submit->direction)
+		ep |= 0x80;
+	printf("RET_SUBMIT[%04d] ep:%0hx len: %d, ", ret_submit->seqnum, ep, ret_submit->actual_length);
+	printf("devid:%x, sf:%d, np:%d, ec:%d\n", ret_submit->devid, ret_submit->start_frame, ret_submit->number_of_packets, ret_submit->error_count);
+}
+
 static BOOL
 send_ret_submit(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit, char *data, unsigned int size)
 {
         ret_submit->status = 0;
         ret_submit->actual_length = size;
+
+	show_ret_submit(ret_submit);
 
         pack(ret_submit);
  

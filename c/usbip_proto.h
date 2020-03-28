@@ -340,9 +340,19 @@ typedef struct __attribute__ ((__packed__))
 {
 	byte	bmRequestType;
 	byte	bRequest;
-	byte	wValue0;
-	byte	wValue1;
-	byte	wIndex0;
-	byte	wIndex1;
+	union {
+		struct {
+			byte	lowByte;
+			byte	hiByte;
+		};
+		unsigned short	W;
+	} wValue;
+	union {
+		struct {
+			byte	lowByte;
+			byte	hiByte;
+		};
+		unsigned short	W;
+	} wIndex;
 	word	wLength;
 } setup_pkt_t;

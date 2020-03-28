@@ -308,7 +308,7 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		break;
 	case 0x22:
 		//SET_LINE_CONTROL_STATE
-		linecs = setup_pkt->wValue0;
+		linecs = setup_pkt->wValue.lowByte;
 
 		printf("SET_LINE_CONTROL_STATE 0x%02X\n", linecs);
 		reply_cmd_submit(vstub, cmd_submit, NULL, 0);

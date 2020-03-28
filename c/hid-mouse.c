@@ -151,7 +151,7 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 
         if (setup_pkt->bmRequestType == 0x81 &&
 	    setup_pkt->bRequest == 0x6 &&
-	    setup_pkt->wValue1 == 0x22) {
+	    setup_pkt->wValue.hiByte == 0x22) {
 		// Get Descriptor
 		// send initial report
 		printf("send initial report\n");

@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -g -Wall -DLINUX 
-PROGS = hid-mouse hid-keyboard cdc-acm bth
+PROGS = hid-mouse hid-keyboard cdc-acm bth cp210x
 COMMONS = vstub.o vstub_net.o usbip_pkt.o
 
 all:	${PROGS}
@@ -15,6 +15,9 @@ cdc-acm: $(COMMONS) cdc-acm.o
 	$(CC) -o $@ $^
 
 bth: $(COMMONS) bth.o
+	$(CC) -o $@ $^
+
+cp210x: $(COMMONS) cp210x.o
 	$(CC) -o $@ $^
 
 $(COMMONS): vstub.h usbip_proto.h

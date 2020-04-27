@@ -109,13 +109,13 @@ handle_get_descriptor_string(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 	memset(str, 0, 255);
 
 	len = cmd_submit->transfer_buffer_length;
-	if (len > *strings[setup_pkt->wValue.W])
-		len = *strings[setup_pkt->wValue.W];
+	if (len > *strings[setup_pkt->wValue.lowByte])
+		len = *strings[setup_pkt->wValue.lowByte];
 	for (i = 0; i < len / 2 - 1; i++)
-		str[i] = strings[setup_pkt->wValue.W][i * 2 + 2];
+		str[i] = strings[setup_pkt->wValue.lowByte][i * 2 + 2];
 
-	printf(" get_descriptor_string: %s\n",str);
-	reply_cmd_submit(vstub, cmd_submit, (char *)strings[setup_pkt->wValue.W], len);
+	printf(" get_descriptor_string: %s\n", str);
+	reply_cmd_submit(vstub, cmd_submit, (char *)strings[setup_pkt->wValue.lowByte], len);
 }
 
 static BOOL

@@ -69,6 +69,8 @@ handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	if (cmd_submit->ep == 1 && cmd_submit->direction) {
 		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
+		/* bulk transfers are requested indefinitely */
+		usleep(300000);
 	}
 	else {
 		error("unhandled non-control\n");
@@ -103,6 +105,10 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		 setup_pkt->wValue.W == 0x0000) {
 		char	data[256];
 		printf("  recv %d\n", cmd_submit->transfer_buffer_length);
+		if (setup_pkt->bRequest == 0x1e) {
+			/* in this case, some pause makes a client to proceed */
+			usleep(400000);
+		}
 		if (!recv_data(vstub, data, cmd_submit->transfer_buffer_length)) {
 			error("failed to recv payload data\n");
 			return;

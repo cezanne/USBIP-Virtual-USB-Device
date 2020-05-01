@@ -60,6 +60,10 @@ extern const char *configuration;
 extern const USB_INTERFACE_DESCRIPTOR *interfaces[];
 extern const unsigned char *strings[];
 
+typedef void (*handler_t)(vstub_t *, USBIP_CMD_SUBMIT *cmd_submit);
+
+extern handler_t	vstub_get_status;
+
 void handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit);
 void handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit);
 

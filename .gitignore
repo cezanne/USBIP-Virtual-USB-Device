@@ -1,5 +1,6 @@
 *~
 *.o
+/c/arduino
 /c/bth
 /c/cdc-acm
 /c/cp210x

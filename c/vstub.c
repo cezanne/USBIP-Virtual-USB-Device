@@ -25,6 +25,8 @@
 
 #include "vstub.h"
 
+handler_t	vstub_get_status;
+
 void
 error(const char *fmt, ...)
 {
@@ -184,7 +186,10 @@ handle_control_transfer_common(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		case 0x06:
 			return handle_get_descriptor(vstub, cmd_submit);
 		case 0x00:
-			handle_get_status(vstub, cmd_submit);
+			if (vstub_get_status)
+				vstub_get_status(vstub, cmd_submit);
+			else
+				handle_get_status(vstub, cmd_submit);
 			return TRUE;
 		}
 		break;

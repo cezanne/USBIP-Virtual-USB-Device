@@ -12,14 +12,14 @@ typedef struct __attribute__ ((__packed__)) _CONFIG_CP210x
 const USB_DEVICE_DESCRIPTOR dev_dsc = {
 	0x12,                   // Size of this descriptor in bytes
 	0x01,                   // DEVICE descriptor type
-	0x0110,                 // USB Spec Release Number in BCD format
+	0x1001,                 // USB Spec Release Number in BCD format
 	0x00,                   // Class Code
 	0x00,                   // Subclass code
 	0x00,                   // Protocol code
 	0x40,                   // Max packet size for EP0, see usb_config.h
-	0x10c4,                 // Vendor ID
-	0xea60,                 // Product ID: Mouse in a circle fw demo
-	0x0100,                 // Device release number in BCD format
+	0xc410,                 // Vendor ID
+	0x60ea,                 // Product ID: Mouse in a circle fw demo
+	0x0001,                 // Device release number in BCD format
 	0x01,                   // Manufacturer string index
 	0x02,                   // Product string index
 	0x03,                   // Device serial number string index

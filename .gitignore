@@ -1,6 +1,7 @@
 *~
 *.o
-/c/cdc-acm
 /c/bth
+/c/cdc-acm
+/c/cp210x
 /c/hid-keyboard
 /c/hid-mouse

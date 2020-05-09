@@ -46,6 +46,7 @@ BOOL recv_data(vstub_t *vstub, char *buf, unsigned len);
 
 USBIP_CMD_SUBMIT *recv_cmd_submit(vstub_t *vstub);
 BOOL reply_cmd_submit(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit, char *data, unsigned int size);
+BOOL reply_cmd_submit_err(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit, int errcode);
 
 BOOL init_vstub_net(void);
 void fini_vstub_net(void);

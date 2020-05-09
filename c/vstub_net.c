@@ -86,7 +86,6 @@ show_ret_submit(USBIP_RET_SUBMIT *ret_submit)
 static BOOL
 send_ret_submit(vstub_t *vstub, USBIP_RET_SUBMIT *ret_submit, char *data, unsigned int size)
 {
-        ret_submit->status = 0;
         ret_submit->actual_length = size;
 
 	show_ret_submit(ret_submit);
@@ -112,6 +111,20 @@ reply_cmd_submit(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit, char *data, unsig
 
 	ret_submit = create_ret_submit(cmd_submit);
 	ret = send_ret_submit(vstub, ret_submit, data, size);
+	free(ret_submit);
+
+	return ret;
+}
+
+BOOL
+reply_cmd_submit_err(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit, int errcode)
+{
+	USBIP_RET_SUBMIT	*ret_submit;
+	BOOL	ret;
+
+	ret_submit = create_ret_submit(cmd_submit);
+	ret_submit->status = errcode;
+	ret = send_ret_submit(vstub, ret_submit, NULL, 0);
 	free(ret_submit);
 
 	return ret;

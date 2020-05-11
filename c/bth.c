@@ -9,7 +9,7 @@ typedef struct __attribute__ ((__packed__)) _CONFIG_BTH
 } CONFIG_BTH;
 
 /* Device Descriptor */
-const USB_DEVICE_DESCRIPTOR dev_dsc = {
+static const USB_DEVICE_DESCRIPTOR dev_dsc = {
 	0x12,                   // Size of this descriptor in bytes
 	0x01,                   // DEVICE descriptor type
 	0x0200,                 // USB Spec Release Number in BCD format
@@ -57,10 +57,9 @@ const char	configuration_bth[] = {
 	0x00, 0x07, 0x21, 0x05, 0x88, 0x13, 0x40, 0x00
 };
 
-const char	*configuration = (char *)configuration_bth;
-const USB_INTERFACE_DESCRIPTOR	*interfaces[] = { };
-const unsigned char	*strings[] = {};
-const USB_DEVICE_QUALIFIER_DESCRIPTOR	dev_qua = {};
+///DEL const USB_INTERFACE_DESCRIPTOR	*interfaces[] = { };
+static const unsigned char	*strings[] = {};
+static const USB_DEVICE_QUALIFIER_DESCRIPTOR	dev_qua = {};
 
 typedef struct {
 	char	data[100];
@@ -100,7 +99,7 @@ static intr_reply_data_t	intr_reply_data[30] = {
 	{ { 0x0e, 0x04, 0x01, 0x24, 0x0c, 0x00 }, 6 },
 };
 
-void
+static void
 handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	if (cmd_submit->direction) {
@@ -121,7 +120,7 @@ handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 	printf("unhandled non-control\n");
 }
 
-void
+static void
 handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
@@ -137,7 +136,7 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 
 		data = (char *)malloc(cmd_submit->transfer_buffer_length);
 		if (!recv_data(vstub, data, cmd_submit->transfer_buffer_length)) {
-			error("invalid format\n");
+			error("invalid format");
 			free(data);
 			return;
 		}
@@ -151,9 +150,14 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 	}
 }
 
-int
-main(void)
-{
-	printf("bluetooth dongle started....\n");
-	usbip_run(&dev_dsc);
-}
+vstubmod_t	vstubmod_bth = {
+	"bth",
+	"ASUS Bluetooth dongle",
+	&dev_dsc,
+	&dev_qua,
+	(CONFIG_GEN *)&configuration_bth,
+	strings,
+	NULL,
+	handle_control_transfer,
+	handle_non_control_transfer
+};

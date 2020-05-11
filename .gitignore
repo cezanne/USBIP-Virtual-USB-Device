@@ -1,9 +1,5 @@
 *~
 *.o
-/c/arduino
-/c/avrmkii
-/c/bth
-/c/cdc-acm
-/c/cp210x
-/c/hid-keyboard
-/c/hid-mouse
+/cscope.files
+/cscope.out
+/c/vstub-server

@@ -35,7 +35,7 @@ BOOL
 send_data(vstub_t *vstub, char *buf, unsigned len)
 {
 	if (send(vstub->sockfd, buf, len, 0) != len) {
-		error("failed to send: %s \n", strerror(errno));
+		error("failed to send: %s", strerror(errno));
 		return FALSE;
 	}
 	return TRUE;
@@ -48,7 +48,12 @@ recv_data(vstub_t *vstub, char *buf, unsigned len)
 
 	while (nrecvs < len) {
 		if ((nrecv = recv(vstub->sockfd, buf + nrecvs, len - nrecvs, 0)) <= 0) {
-			error("failed to recv: %s\n", strerror(errno));
+			if (nrecv == 0) {
+				error("peer disconnected");
+				return FALSE;
+			}
+
+			error("failed to recv: error: %s", strerror(errno));
 			return FALSE;
 		}
 		nrecvs += nrecv;
@@ -130,10 +135,12 @@ reply_cmd_submit_err(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit, int errcode)
 	return ret;
 }
 
-BOOL
-accept_vstub(vstub_t *vstub)
+vstub_t *
+accept_vstub(void)
 {
+	vstub_t	*vstub;
 	struct sockaddr_in	cli;
+	int	sockfd;
 #ifdef LINUX
 	unsigned int clilen;
 #else
@@ -141,21 +148,24 @@ accept_vstub(vstub_t *vstub)
 #endif
 
 	clilen = sizeof(cli);
-	if ((vstub->sockfd = accept(fd_accept, (sockaddr *)&cli, &clilen)) < 0) {
+	if ((sockfd = accept(fd_accept, (sockaddr *)&cli, &clilen)) < 0) {
 		printf("accept error : %s \n", strerror(errno));
-		return FALSE;
+		return NULL;
 	}
 
 	printf("Connection address:%s\n", inet_ntoa(cli.sin_addr));
 
+	vstub = (vstub_t *)malloc(sizeof(vstub_t));
+	vstub->sockfd = sockfd;
 	vstub->attached = FALSE;
-	return TRUE;
+	return vstub;
 }
 
 void
 close_vstub(vstub_t *vstub)
 {
 	close(vstub->sockfd);
+	free(vstub);
 }
 
 BOOL

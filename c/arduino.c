@@ -1,7 +1,7 @@
 #include "vstub.h"
 
 /* Device Descriptor */
-const USB_DEVICE_DESCRIPTOR	dev_dsc = {
+static const USB_DEVICE_DESCRIPTOR	dev_dsc = {
 	0x12, 0x01,
 	0x1001,
 	0x02, 0x00, 0x00, 0x08,
@@ -12,17 +12,16 @@ const USB_DEVICE_DESCRIPTOR	dev_dsc = {
 };
 
 /* Configuration 1 Descriptor */
-const char	configuration_avrmkii[] = {
+static const char	configuration_arduino[] = {
 	0x09, 0x02, 0x3e, 0x00, 0x02, 0x01, 0x00, 0xc0, 0x32, 0x09, 0x04, 0x00, 0x00, 0x01, 0x02, 0x02,
 	0x01, 0x00, 0x05, 0x24, 0x00, 0x01, 0x10, 0x04, 0x24, 0x02, 0x06, 0x05, 0x24, 0x06, 0x00, 0x01,
 	0x07, 0x05, 0x82, 0x03, 0x08, 0x00, 0xff, 0x09, 0x04, 0x01, 0x00, 0x02, 0x0a, 0x00, 0x00, 0x00,
 	0x07, 0x05, 0x04, 0x02, 0x40, 0x00, 0x01, 0x07, 0x05, 0x83, 0x02, 0x40, 0x00, 0x01
 };
 
-const char	*configuration = (char *)configuration_avrmkii;
-const USB_INTERFACE_DESCRIPTOR	*interfaces[] = { };
-const unsigned char	*strings[] = { NULL };
-const USB_DEVICE_QUALIFIER_DESCRIPTOR	dev_qua = {};
+///DEL const USB_INTERFACE_DESCRIPTOR	*interfaces[] = { };
+static const unsigned char	*strings[] = { NULL };
+static const USB_DEVICE_QUALIFIER_DESCRIPTOR	dev_qua = {};
 
 typedef struct {
 	char	data[16];
@@ -39,13 +38,13 @@ static bulk_reply_data_t	bulk_reply_data[30] = {
 	{ { 0x0a, 0x00 }, 2 },
 };
 
-void
+static void
 handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	if (cmd_submit->ep == 0 && !cmd_submit->direction) {
 		char	data[1024];
 		if (!recv_data(vstub, data, cmd_submit->transfer_buffer_length)) {
-			error("failed to recv bulk out data\n");
+			error("failed to recv bulk out data");
 			return;
 		}
 		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
@@ -57,11 +56,11 @@ handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		n_bulks++;
 	}
 	else {
-		error("unhandled non-control\n");
+		error("unhandled non-control");
 	}
 }
 
-void
+static void
 handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
@@ -81,11 +80,11 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		}
 	}
 	else {
-		error("unhandled control transfer\n");
+		error("unhandled control transfer");
 	}
 }
 
-void
+static void
 arduino_handle_get_status(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	char	data[2] = { 0x64, 0x04 };
@@ -94,11 +93,14 @@ arduino_handle_get_status(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 	printf("GET_STATUS\n");	
 }
 
-int
-main(void)
-{
-	printf("arduino started....\n");
-
-	vstub_get_status = arduino_handle_get_status;
-	usbip_run(&dev_dsc);
-}
+vstubmod_t	vstubmod_arduino = {
+	"arduino",
+	"Arduino",
+	&dev_dsc,
+	&dev_qua,
+	(CONFIG_GEN *)&configuration_arduino,
+	strings,
+	arduino_handle_get_status,
+	handle_control_transfer,
+	handle_non_control_transfer
+};

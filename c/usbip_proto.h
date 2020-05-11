@@ -24,6 +24,9 @@
    ######################################################################## */
 
 
+#ifndef _USBIP_PROTO_H_
+#define _USBIP_PROTO_H_
+
 //USB definitions
 
 typedef unsigned char	byte;
@@ -238,7 +241,7 @@ typedef struct  __attribute__ ((__packed__)) _OP_REP_DEVLIST_INTERFACE
 typedef struct  __attribute__ ((__packed__)) _OP_REP_DEVLIST
 {
 	OP_REP_DEVLIST_HEADER      header;
-	OP_REP_DEVLIST_DEVICE      device; //only one!
+	OP_REP_DEVLIST_DEVICE      device;
 	OP_REP_DEVLIST_INTERFACE   *interfaces;
 } OP_REP_DEVLIST;
 
@@ -249,7 +252,6 @@ typedef struct  __attribute__ ((__packed__)) _OP_REQ_IMPORT
 	int	status;
 	char	busID[32];
 } OP_REQ_IMPORT;
-
 
 typedef struct  __attribute__ ((__packed__)) _OP_REP_IMPORT
 {
@@ -356,3 +358,5 @@ typedef struct __attribute__ ((__packed__))
 	} wIndex;
 	word	wLength;
 } setup_pkt_t;
+
+#endif

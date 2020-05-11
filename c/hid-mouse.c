@@ -44,7 +44,7 @@ const USB_DEVICE_DESCRIPTOR dev_dsc = {
 };
 
 /* Configuration 1 Descriptor */
-const CONFIG_HID configuration_hid = {
+static const CONFIG_HID configuration_hid = {
 	{
 		/* Configuration Descriptor */
 		0x09,//sizeof(USB_CFG_DSC),    // Size of this descriptor in bytes
@@ -89,10 +89,9 @@ const CONFIG_HID configuration_hid = {
 	}
 };
 
-const char	*configuration = (const char *)&configuration_hid; 
-const USB_INTERFACE_DESCRIPTOR	*interfaces[] = { &configuration_hid.dev_int };
-const unsigned char	*strings[] = {};
-const USB_DEVICE_QUALIFIER_DESCRIPTOR	dev_qua = {};
+////DEL static const USB_INTERFACE_DESCRIPTOR	*interfaces[] = { &configuration_hid.dev_int };
+static const unsigned char	*strings[] = {};
+static const USB_DEVICE_QUALIFIER_DESCRIPTOR	dev_qua = {};
 
 //Class specific descriptor - HID mouse
 const byte mouse_report[0x34] = {
@@ -124,7 +123,7 @@ const byte mouse_report[0x34] = {
 	0xC0, 0xC0
 };
 
-void
+static void
 handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
         // Sending random mouse data
@@ -144,7 +143,7 @@ handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 	count++;
 }
 
-void
+static void
 handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
@@ -167,9 +166,14 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 	}
 }
 
-int
-main(void)
-{
-	printf("hid mouse started....\n");
-	usbip_run(&dev_dsc);
-}
+vstubmod_t	vstubmod_hid_mouse = {
+	"hid-mouse",
+	"USB mouse",
+	&dev_dsc,
+	&dev_qua,
+	(CONFIG_GEN *)&configuration_hid,
+	strings,
+	NULL,
+	handle_control_transfer,
+	handle_non_control_transfer
+};

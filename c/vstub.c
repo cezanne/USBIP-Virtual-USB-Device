@@ -25,7 +25,8 @@
 
 #include "vstub.h"
 
-handler_t	vstub_get_status;
+#include <signal.h>
+#include <pthread.h>
 
 void
 error(const char *fmt, ...)
@@ -40,65 +41,40 @@ error(const char *fmt, ...)
 	printf("error: %s\n", buf);
 }
 
-static void
-handle_device_list(const USB_DEVICE_DESCRIPTOR *dev_dsc, OP_REP_DEVLIST *list)
+static BOOL
+handle_attach(vstub_t *vstub, unsigned devno, OP_REP_IMPORT *rep)
 {
-	CONFIG_GEN * conf= (CONFIG_GEN *)configuration;
-	int i;
+	vstubmod_t	*mod;
 
-	list->header.version = htons(273);
-	list->header.command = htons(5);
-	list->header.status=0;
-	list->header.nExportedDevice=htonl(1);
-	memset(list->device.usbPath,0,256);
-	strcpy(list->device.usbPath,"/sys/devices/pci0000:00/0000:00:01.2/usb1/1-1");
-	memset(list->device.busID,0,32);
-	strcpy(list->device.busID,"1-1");
-	list->device.busnum = htonl(1);
-	list->device.devnum = htonl(2);
-	list->device.speed = htonl(2);
-	list->device.idVendor=htons(dev_dsc->idVendor);
-	list->device.idProduct=htons(dev_dsc->idProduct);
-	list->device.bcdDevice=htons(dev_dsc->bcdDevice);
-	list->device.bDeviceClass=dev_dsc->bDeviceClass;
-	list->device.bDeviceSubClass=dev_dsc->bDeviceSubClass;
-	list->device.bDeviceProtocol=dev_dsc->bDeviceProtocol;
-	list->device.bConfigurationValue=conf->dev_conf.bConfigurationValue;
-	list->device.bNumConfigurations=dev_dsc->bNumConfigurations; 
-	list->device.bNumInterfaces=conf->dev_conf.bNumInterfaces;
-	list->interfaces = malloc(list->device.bNumInterfaces*sizeof(OP_REP_DEVLIST_INTERFACE));
-	for(i = 0; i < list->device.bNumInterfaces; i++) {
-		list->interfaces[i].bInterfaceClass=interfaces[i]->bInterfaceClass;
-		list->interfaces[i].bInterfaceSubClass=interfaces[i]->bInterfaceSubClass;
-		list->interfaces[i].bInterfaceProtocol=interfaces[i]->bInterfaceProtocol;
-		list->interfaces[i].padding=0;
+	mod = find_vstubmod(devno);
+	if (mod == NULL) {
+		error("not exist devno: devno: %u", devno);
+		return FALSE;
 	}
-}
 
-static void
-handle_attach(const USB_DEVICE_DESCRIPTOR *dev_dsc, OP_REP_IMPORT *rep)
-{
-	CONFIG_GEN	*conf= (CONFIG_GEN *)configuration;
-    
 	rep->version = htons(273);
 	rep->command = htons(3);
 	rep->status = 0;
-	memset(rep->usbPath, 0, 256);
-	strcpy(rep->usbPath, "/sys/devices/pci0000:00/0000:00:01.2/usb1/1-1");
-	memset(rep->busID, 0, 32);
-	strcpy(rep->busID, "1-1");
+	snprintf(rep->usbPath, 256, "/sys/devices/pci0000:00/0000:00:01.2/usb1/1-%u", devno);
+	snprintf(rep->busID, 32, "1-%u", devno);
 	rep->busnum = htonl(1);
 	rep->devnum = htonl(2);
 	rep->speed = htonl(2);
-	rep->idVendor = dev_dsc->idVendor;
-	rep->idProduct = dev_dsc->idProduct;
-	rep->bcdDevice = dev_dsc->bcdDevice;
-	rep->bDeviceClass = dev_dsc->bDeviceClass;
-	rep->bDeviceSubClass = dev_dsc->bDeviceSubClass;
-	rep->bDeviceProtocol = dev_dsc->bDeviceProtocol;
-	rep->bNumConfigurations = dev_dsc->bNumConfigurations;
-	rep->bConfigurationValue = conf->dev_conf.bConfigurationValue;
-	rep->bNumInterfaces = conf->dev_conf.bNumInterfaces;
+	rep->idVendor = mod->dev_dsc->idVendor;
+	rep->idProduct = mod->dev_dsc->idProduct;
+	rep->bcdDevice = mod->dev_dsc->bcdDevice;
+	rep->bDeviceClass = mod->dev_dsc->bDeviceClass;
+	rep->bDeviceSubClass = mod->dev_dsc->bDeviceSubClass;
+	rep->bDeviceProtocol = mod->dev_dsc->bDeviceProtocol;
+	rep->bNumConfigurations = mod->dev_dsc->bNumConfigurations;
+	rep->bConfigurationValue = mod->conf->dev_conf.bConfigurationValue;
+	rep->bNumInterfaces = mod->conf->dev_conf.bNumInterfaces;
+
+	vstub->mod = mod;
+
+	printf("device attached: %s\n", mod->desc);
+
+	return TRUE;
 }
 
 static void
@@ -111,13 +87,13 @@ handle_get_descriptor_string(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 	memset(str, 0, 255);
 
 	len = cmd_submit->transfer_buffer_length;
-	if (len > *strings[setup_pkt->wValue.lowByte])
-		len = *strings[setup_pkt->wValue.lowByte];
+	if (len > *vstub->mod->strings[setup_pkt->wValue.lowByte])
+		len = *vstub->mod->strings[setup_pkt->wValue.lowByte];
 	for (i = 0; i < len / 2 - 1; i++)
-		str[i] = strings[setup_pkt->wValue.lowByte][i * 2 + 2];
+		str[i] = vstub->mod->strings[setup_pkt->wValue.lowByte][i * 2 + 2];
 
 	printf(" get_descriptor_string: %s\n", str);
-	reply_cmd_submit(vstub, cmd_submit, (char *)strings[setup_pkt->wValue.lowByte], len);
+	reply_cmd_submit(vstub, cmd_submit, (char *)vstub->mod->strings[setup_pkt->wValue.lowByte], len);
 }
 
 static BOOL
@@ -129,12 +105,12 @@ handle_get_descriptor(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 	case 0x1:
 		// Device
 		printf(" get_descriptor: Device\n");
-		reply_cmd_submit(vstub, cmd_submit, (char *)&dev_dsc, sizeof(USB_DEVICE_DESCRIPTOR));
+		reply_cmd_submit(vstub, cmd_submit, (char *)vstub->mod->dev_dsc, sizeof(USB_DEVICE_DESCRIPTOR));
 		break;
 	case 0x2:
 		// configuration
 		printf(" get_descriptor: Configuration\n");
-		reply_cmd_submit(vstub, cmd_submit, (char *)configuration, setup_pkt->wLength);
+		reply_cmd_submit(vstub, cmd_submit, (char *)vstub->mod->conf, setup_pkt->wLength);
 		break;
 	case 0x3:
 		handle_get_descriptor_string(vstub, cmd_submit);
@@ -142,7 +118,7 @@ handle_get_descriptor(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 	case 0x6:
 		// qualifier
 		printf(" get_descriptor: Qualifier\n");
-		reply_cmd_submit(vstub, cmd_submit, (char *)&dev_qua, setup_pkt->wLength);
+		reply_cmd_submit(vstub, cmd_submit, (char *)vstub->mod->dev_qua, setup_pkt->wLength);
 	default:
 		return FALSE;
 	}
@@ -186,8 +162,8 @@ handle_control_transfer_common(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		case 0x06:
 			return handle_get_descriptor(vstub, cmd_submit);
 		case 0x00:
-			if (vstub_get_status)
-				vstub_get_status(vstub, cmd_submit);
+			if (vstub->mod->handler_get_status)
+				vstub->mod->handler_get_status(vstub, cmd_submit);
 			else
 				handle_get_status(vstub, cmd_submit);
 			return TRUE;
@@ -221,48 +197,30 @@ handle_cmd_submit(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 	if (cmd_submit->ep == 0) {
 		if (handle_control_transfer_common(vstub, cmd_submit))
 			return;
-		handle_control_transfer(vstub, cmd_submit);
+		vstub->mod->handler_control_transfer(vstub, cmd_submit);
 	}
 	else {
-		handle_non_control_transfer(vstub, cmd_submit);
+		vstub->mod->handler_non_control_transfer(vstub, cmd_submit);
 	}
 }
 
 static BOOL
-handle_unattached_devlist(vstub_t *vstub, const USB_DEVICE_DESCRIPTOR *dev_dsc)
+handle_unattached_import(vstub_t *vstub)
 {
-	OP_REP_DEVLIST	list;
-
-	printf("list devices\n");
-
-	handle_device_list(dev_dsc, &list);
-
-	if (!send_data(vstub, (char *)&list.header, sizeof(OP_REP_DEVLIST_HEADER)))
-		return FALSE;
-
-	if (!send_data(vstub, (char *)&list.device, sizeof(OP_REP_DEVLIST_DEVICE)))
-		return FALSE;
-
-	if (!send_data(vstub, (char *)list.interfaces, sizeof(OP_REP_DEVLIST_INTERFACE) * list.device.bNumInterfaces))
-		return FALSE;
-
-	free(list.interfaces);
-
-	return TRUE;
-}
-
-static BOOL
-handle_unattached_import(vstub_t *vstub, const USB_DEVICE_DESCRIPTOR *dev_dsc)
-{
-	char	busid[32];
 	OP_REP_IMPORT	rep;
-	
-	printf("attach device\n");
+	char	busid[32];
+	unsigned	devno;
 
 	if (!recv_data(vstub, busid, 32)) {
 		return FALSE;
 	}
-	handle_attach(dev_dsc, &rep);
+	if (sscanf(busid, "%*u-%u", &devno) != 1) {
+		error("invalid busid: %s", busid);
+		return FALSE;
+	}
+	if (!handle_attach(vstub, devno, &rep))
+		return FALSE;
+
 	if (!send_data(vstub, (char *)&rep, sizeof(OP_REP_IMPORT))) {
 		return FALSE;
 	}
@@ -271,7 +229,7 @@ handle_unattached_import(vstub_t *vstub, const USB_DEVICE_DESCRIPTOR *dev_dsc)
 }
 
 static BOOL
-handle_unattached(vstub_t *vstub, const USB_DEVICE_DESCRIPTOR *dev_dsc)
+handle_unattached(vstub_t *vstub)
 {
 	OP_REQ_DEVLIST	req;
 
@@ -282,9 +240,9 @@ handle_unattached(vstub_t *vstub, const USB_DEVICE_DESCRIPTOR *dev_dsc)
 
 	switch (req.command) {
 	case 0x8005:
-		return handle_unattached_devlist(vstub, dev_dsc);
+		return handle_unattached_devlist(vstub);
 	case 0x8003:
-		return handle_unattached_import(vstub, dev_dsc);
+		return handle_unattached_import(vstub);
 	default:
 		return FALSE;
 	}
@@ -327,7 +285,7 @@ handle_attached(vstub_t *vstub)
 		printf("####################### Unlink URB %u  (not working!!!)\n", cmd_submit->transfer_flags);
 		break;
 	default:
-		error("Unknown USBIP cmd: %d\n", cmd_submit->command);
+		error("Unknown USBIP cmd: %d", cmd_submit->command);
 		ret = FALSE;
 	}
 
@@ -335,27 +293,52 @@ handle_attached(vstub_t *vstub)
 	return ret;
 }
 
-void
-usbip_run(const USB_DEVICE_DESCRIPTOR *dev_dsc)
+static void *
+vstub_func(void *arg)
 {
+	vstub_t	*vstub = (vstub_t *)arg;
+
+	while (TRUE) {
+		if (!vstub->attached) {
+			if (!handle_unattached(vstub))
+				break;
+		}
+		else {
+			if (!handle_attached(vstub))
+				break;
+		}
+	}	
+
+	close_vstub(vstub);
+	return NULL;
+}
+
+static void
+start_vstub(vstub_t *vstub)
+{
+	pthread_t	pthread;
+
+	pthread_create(&pthread, NULL, vstub_func, vstub);
+	pthread_detach(pthread);
+}
+
+int
+main(int argc, char *argv[])
+{
+	signal(SIGPIPE, SIG_IGN);
+
+	if (!setup_vstubmods(argc - 1, argv + 1))
+		return 1;
+
 	init_vstub_net();
 
 	for (;;) {
-		vstub_t	vStub;
+		vstub_t	*vstub;
 
-		if (!accept_vstub(&vStub))
+		if ((vstub = accept_vstub()) == NULL)
 			break;
 
-		while (1) {
-			if (!vStub.attached)
-				handle_unattached(&vStub, dev_dsc);
-			else {
-				if (!handle_attached(&vStub))
-					break;
-			}
-		}
-
-		close_vstub(&vStub);
+		start_vstub(vstub);
 	}
 
 	fini_vstub_net();

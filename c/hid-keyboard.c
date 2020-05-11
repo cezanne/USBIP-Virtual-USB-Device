@@ -26,7 +26,7 @@
 #include "vstub.h"
 
 /* Device Descriptor */
-const USB_DEVICE_DESCRIPTOR dev_dsc=
+static const USB_DEVICE_DESCRIPTOR dev_dsc=
 {
     0x12,                   // Size of this descriptor in bytes
     0x01,                   // DEVICE descriptor type
@@ -45,7 +45,7 @@ const USB_DEVICE_DESCRIPTOR dev_dsc=
 };
 
 /* Configuration 1 Descriptor */
-const CONFIG_HID  configuration_hid={{
+static const CONFIG_HID  configuration_hid={{
     /* Configuration Descriptor */
     0x09,//sizeof(USB_CFG_DSC),    // Size of this descriptor in bytes
     USB_DESCRIPTOR_CONFIGURATION,                // CONFIGURATION descriptor type
@@ -85,10 +85,9 @@ const CONFIG_HID  configuration_hid={{
     0xFF                        //Interval
 }};
 
-const char *configuration = (const char *)&configuration_hid; 
-const USB_INTERFACE_DESCRIPTOR *interfaces[]={ &configuration_hid.dev_int };
-const unsigned char *strings[]={};
-const USB_DEVICE_QUALIFIER_DESCRIPTOR  dev_qua={};
+///DEL const USB_INTERFACE_DESCRIPTOR *interfaces[]={ &configuration_hid.dev_int };
+static const unsigned char *strings[]={};
+static const USB_DEVICE_QUALIFIER_DESCRIPTOR  dev_qua={};
 
 //Class specific descriptor - HID keyboard
 const byte keyboard_report[0x3F]={
@@ -126,7 +125,7 @@ const byte keyboard_report[0x3F]={
 	0xC0
 };  			//End Collection 
 
-void
+static void
 handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
         // Sending random keyboard data
@@ -145,7 +144,7 @@ handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 	count++;
 }
 
-void
+static void
 handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
@@ -180,9 +179,14 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
         }
 }
 
-int
-main(void)
-{
-	printf("hid keyboard started....\n");
-	usbip_run(&dev_dsc);
-}
+vstubmod_t	vstubmod_hid_keyboard = {
+	"hid-keyboard",
+	"USB keyboard",
+	&dev_dsc,
+	&dev_qua,
+	(CONFIG_GEN *)&configuration_hid,
+	strings,
+	NULL,
+	handle_control_transfer,
+	handle_non_control_transfer
+};

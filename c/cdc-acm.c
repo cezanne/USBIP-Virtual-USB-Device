@@ -26,7 +26,7 @@
 #include "vstub.h"
 
 /* Device Descriptor */
-const USB_DEVICE_DESCRIPTOR dev_dsc=
+static const USB_DEVICE_DESCRIPTOR dev_dsc=
 {
 	0x12,                   // Size of this descriptor in bytes
 	0x01,                   // DEVICE descriptor type
@@ -44,7 +44,7 @@ const USB_DEVICE_DESCRIPTOR dev_dsc=
 	0x01                    // Number of possible configurations
 };
 
-const USB_DEVICE_QUALIFIER_DESCRIPTOR dev_qua = {
+static const USB_DEVICE_QUALIFIER_DESCRIPTOR dev_qua = {
 	0x0A,       // bLength
 	0x06,       // bDescriptorType
 	0x0002,     // bcdUSB
@@ -57,7 +57,7 @@ const USB_DEVICE_QUALIFIER_DESCRIPTOR dev_qua = {
 };
 
 /* Configuration 1 Descriptor */
-const CONFIG_CDC  configuration_cdc = {
+static const CONFIG_CDC  configuration_cdc = {
 	{
 		/* Configuration Descriptor */
 		0x09,//sizeof(USB_CFG_DSC),    // Size of this descriptor in bytes
@@ -153,14 +153,14 @@ const CONFIG_CDC  configuration_cdc = {
 	}
 };
 
-const unsigned char string_0[] = { // available languages  descriptor
+static const unsigned char string_0[] = { // available languages  descriptor
 	0x04,
 	USB_DESCRIPTOR_STRING,
 	0x09,
 	0x04
 };
 
-const unsigned char string_1[] = { //
+static const unsigned char string_1[] = { //
 	0x0A,
 	USB_DESCRIPTOR_STRING, // bLength, bDscType
 	'T', 0x00, //
@@ -169,7 +169,7 @@ const unsigned char string_1[] = { //
 	't', 0x00, //
 };
 
-const unsigned char string_2[] = { //
+static const unsigned char string_2[] = { //
 	0x10,
 	USB_DESCRIPTOR_STRING, //
 	'U', 0x00, //
@@ -181,7 +181,7 @@ const unsigned char string_2[] = { //
 	'C', 0x00, //
 };
 
-const unsigned char string_3[] = { //
+static const unsigned char string_3[] = { //
 	0x18,
 	USB_DESCRIPTOR_STRING, //
 	'V', 0x00, //
@@ -197,16 +197,15 @@ const unsigned char string_3[] = { //
 	'B', 0x00, //
 };
 
-const char *configuration = (const char *)&configuration_cdc;
-const USB_INTERFACE_DESCRIPTOR *interfaces[]={ &configuration_cdc.dev_int0, &configuration_cdc.dev_int1};
-const unsigned char *strings[] = {string_0, string_1, string_2, string_3};
+///DEL static const USB_INTERFACE_DESCRIPTOR *interfaces[]={ &configuration_cdc.dev_int0, &configuration_cdc.dev_int1};
+static const unsigned char *strings[] = {string_0, string_1, string_2, string_3};
 
 #define BSIZE 64
 
 static char	buffer[BSIZE+1];
 static int	bsize = 0;
 
-void
+static void
 handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	if (cmd_submit->ep == 0x01) {
@@ -283,7 +282,7 @@ typedef struct _LINE_CODING
 LINE_CODING linec;
 unsigned short linecs = 0;
 
-void
+static void
 handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
@@ -324,10 +323,14 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 	}
 }
 
-int
-main(void)
-{
-	printf("cdc started....\n");
-
-	usbip_run(&dev_dsc);
-}
+vstubmod_t	vstubmod_cdc_acm = {
+	"cdc",
+	"CDC ACM",
+	&dev_dsc,
+	&dev_qua,
+	(CONFIG_GEN *)&configuration_cdc,
+	strings,
+	NULL,
+	handle_control_transfer,
+	handle_non_control_transfer
+};

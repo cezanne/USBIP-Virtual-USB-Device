@@ -5,10 +5,9 @@
 
 #include<sys/types.h>
 #include<sys/socket.h>
-#include<sys/un.h>
 #include<netinet/in.h>
 #include<arpa/inet.h>
-#define        min(a,b)        ((a) < (b) ? (a) : (b))
+
 typedef int	BOOL;
 #define TRUE	1
 #define FALSE	0
@@ -34,7 +33,27 @@ typedef struct sockaddr	sockaddr;
 typedef struct {
 	BOOL	attached;
 	int	sockfd;
+	struct _vstubmod	*mod;
 } vstub_t;
+
+typedef void (*handler_t)(vstub_t *, USBIP_CMD_SUBMIT *cmd_submit);
+
+typedef struct _vstubmod {
+	const char	*code;
+	const char	*desc;
+	const USB_DEVICE_DESCRIPTOR	*dev_dsc;
+	const USB_DEVICE_QUALIFIER_DESCRIPTOR	*dev_qua;
+	const CONFIG_GEN	*conf;
+	const unsigned char	**strings;
+	handler_t	handler_get_status;
+	handler_t	handler_control_transfer;
+	handler_t	handler_non_control_transfer;
+} vstubmod_t;
+
+#define MAX_STUBS	32
+
+extern unsigned		n_mods_bound;
+extern vstubmod_t	*mods_bound[MAX_STUBS];
 
 void error(const char *fmt, ...);
 
@@ -48,26 +67,15 @@ USBIP_CMD_SUBMIT *recv_cmd_submit(vstub_t *vstub);
 BOOL reply_cmd_submit(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit, char *data, unsigned int size);
 BOOL reply_cmd_submit_err(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit, int errcode);
 
+BOOL setup_vstubmods(int argc, char *argv[]);
+
 BOOL init_vstub_net(void);
 void fini_vstub_net(void);
 
-BOOL accept_vstub(vstub_t *vstub);
+vstub_t *accept_vstub(void);
 void close_vstub(vstub_t *vstub);
 
-//implemented by user
-extern const USB_DEVICE_DESCRIPTOR dev_dsc;
-extern const USB_DEVICE_QUALIFIER_DESCRIPTOR  dev_qua;
-extern const char *configuration;
-extern const USB_INTERFACE_DESCRIPTOR *interfaces[];
-extern const unsigned char *strings[];
-
-typedef void (*handler_t)(vstub_t *, USBIP_CMD_SUBMIT *cmd_submit);
-
-extern handler_t	vstub_get_status;
-
-void handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit);
-void handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit);
-
-void usbip_run(const USB_DEVICE_DESCRIPTOR *dev_dsc);
+vstubmod_t *find_vstubmod(unsigned devno);
+BOOL handle_unattached_devlist(vstub_t *vstub);
 
 #endif

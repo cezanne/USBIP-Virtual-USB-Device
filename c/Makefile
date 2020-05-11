@@ -1,32 +1,15 @@
 CC = gcc
 CFLAGS = -g -Wall -DLINUX 
-PROGS = hid-mouse hid-keyboard cdc-acm bth cp210x arduino avrmkii
-COMMONS = vstub.o vstub_net.o usbip_pkt.o
+PROGS = vstub-server
+COMMONS = vstub.o vstubmod.o vstub_list.o vstub_net.o usbip_pkt.o
+MODULES = hid-mouse.o hid-keyboard.o cdc-acm.o bth.o cp210x.o arduino.o avrmkii.o
 
 all:	${PROGS}
 
-hid-mouse: $(COMMONS) hid-mouse.o
-	$(CC) -o $@ $^
+vstub-server: $(COMMONS) $(MODULES)
+	$(CC) -o $@ $^ -lpthread
 
-hid-keyboard: $(COMMONS) hid-keyboard.o
-	$(CC) -o $@ $^
-
-cdc-acm: $(COMMONS) cdc-acm.o
-	$(CC) -o $@ $^
-
-bth: $(COMMONS) bth.o
-	$(CC) -o $@ $^
-
-cp210x: $(COMMONS) cp210x.o
-	$(CC) -o $@ $^
-
-arduino: $(COMMONS) arduino.o
-	$(CC) -o $@ $^
-
-avrmkii: $(COMMONS) avrmkii.o
-	$(CC) -o $@ $^
-
-$(COMMONS): vstub.h usbip_proto.h
+$(COMMONS) $(MODULES): vstub.h usbip_proto.h
 
 clean:
 	rm -f ${PROGS} core core.* *.o temp.* *.out typescript*

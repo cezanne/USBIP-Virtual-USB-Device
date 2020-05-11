@@ -1,15 +1,7 @@
 #include "vstub.h"
 
-//CP210x Configuration
-typedef struct __attribute__ ((__packed__)) _CONFIG_CP210x
-{
-	USB_CONFIGURATION_DESCRIPTOR	dev_conf;
-	USB_INTERFACE_DESCRIPTOR	dev_int;
-	USB_ENDPOINT_DESCRIPTOR		dev_ep1, dev_ep2, dev_ep3;
-} CONFIG_BTH;
-
 /* Device Descriptor */
-const USB_DEVICE_DESCRIPTOR dev_dsc = {
+static const USB_DEVICE_DESCRIPTOR dev_dsc = {
 	0x12,                   // Size of this descriptor in bytes
 	0x01,                   // DEVICE descriptor type
 	0x1001,                 // USB Spec Release Number in BCD format
@@ -27,14 +19,14 @@ const USB_DEVICE_DESCRIPTOR dev_dsc = {
 };
 
 /* Configuration 1 Descriptor */
-const char	configuration_cp210x[] = {
+static const char	configuration_cp210x[] = {
 	0x09, 0x02, 0x20, 0x00, 0x01, 0x01, 0x00, 0x80,
 	0x32, 0x09, 0x04, 0x00, 0x00, 0x02, 0xff, 0x00, 
 	0x00, 0x02, 0x07, 0x05, 0x81, 0x02, 0x40, 0x00, 
 	0x00, 0x07, 0x05, 0x01, 0x02, 0x40, 0x00, 0x00
 };
 
-const unsigned char string_2[] = {
+static const unsigned char string_2[] = {
 	0x4a,
 	USB_DESCRIPTOR_STRING,
 	0x43, 0x00, 0x50, 0x00, 0x32, 0x00, 0x31, 0x00, 0x30, 0x00, 0x32, 0x00,
@@ -45,16 +37,15 @@ const unsigned char string_2[] = {
 	0x72, 0x00, 0x6f, 0x00, 0x6c, 0x00, 0x6c, 0x00, 0x65, 0x00, 0x72, 0x00
 };
 
-const unsigned char string_3[] = {
+static const unsigned char string_3[] = {
 	0x0a,
 	USB_DESCRIPTOR_STRING,
 	0x30, 0x00, 0x30, 0x00, 0x30, 0x00, 0x31, 0x00
 };
 
-const char	*configuration = (char *)configuration_cp210x;
-const USB_INTERFACE_DESCRIPTOR	*interfaces[] = { };
-const unsigned char	*strings[] = { NULL, NULL, string_2, string_3 };
-const USB_DEVICE_QUALIFIER_DESCRIPTOR	dev_qua = {};
+///DEL const USB_INTERFACE_DESCRIPTOR	*interfaces[] = { };
+static const unsigned char	*strings[] = { NULL, NULL, string_2, string_3 };
+static const USB_DEVICE_QUALIFIER_DESCRIPTOR	dev_qua = {};
 
 static char	control_reply[] = {
 	0x42, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00,
@@ -64,7 +55,7 @@ static char	control_reply[] = {
 	0x30, 0x00
 };
 
-void
+static void
 handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	if (cmd_submit->ep == 1 && cmd_submit->direction) {
@@ -73,11 +64,11 @@ handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		usleep(300000);
 	}
 	else {
-		error("unhandled non-control\n");
+		error("unhandled non-control");
 	}
 }
 
-void
+static void
 handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
@@ -110,19 +101,24 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 			usleep(400000);
 		}
 		if (!recv_data(vstub, data, cmd_submit->transfer_buffer_length)) {
-			error("failed to recv payload data\n");
+			error("failed to recv payload data");
 			return;
 		}
 		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 	}
 	else {
-		error("unhandled control transfer\n");
+		error("unhandled control transfer");
 	}
 }
 
-int
-main(void)
-{
-	printf("cp210x started....\n");
-	usbip_run(&dev_dsc);
-}
+vstubmod_t	vstubmod_cp210x = {
+	"cp210x",
+	"CP210X",
+	&dev_dsc,
+	&dev_qua,
+	(CONFIG_GEN *)&configuration_cp210x,
+	strings,
+	NULL,
+	handle_control_transfer,
+	handle_non_control_transfer
+};

@@ -36,7 +36,7 @@ typedef struct {
 	struct _vstubmod	*mod;
 } vstub_t;
 
-typedef void (*handler_t)(vstub_t *, USBIP_CMD_SUBMIT *cmd_submit);
+typedef BOOL (*handler_t)(vstub_t *, USBIP_CMD_SUBMIT *cmd_submit);
 
 typedef struct _vstubmod {
 	const char	*code;

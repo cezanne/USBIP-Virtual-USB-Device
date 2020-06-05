@@ -55,20 +55,21 @@ static char	control_reply[] = {
 	0x30, 0x00
 };
 
-static void
+static BOOL
 handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	if (cmd_submit->ep == 1 && cmd_submit->direction) {
 		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 		/* bulk transfers are requested indefinitely */
 		usleep(300000);
+		return TRUE;
 	}
 	else {
-		error("unhandled non-control");
+		return FALSE;
 	}
 }
 
-static void
+static BOOL
 handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
@@ -102,13 +103,13 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		}
 		if (!recv_data(vstub, data, cmd_submit->transfer_buffer_length)) {
 			error("failed to recv payload data");
-			return;
+			return FALSE;
 		}
 		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 	}
-	else {
-		error("unhandled control transfer");
-	}
+	else
+		return FALSE;
+	return TRUE;
 }
 
 vstubmod_t	vstubmod_cp210x = {

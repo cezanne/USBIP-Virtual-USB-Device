@@ -205,7 +205,7 @@ static const unsigned char *strings[] = {string_0, string_1, string_2, string_3}
 static char	buffer[BSIZE+1];
 static int	bsize = 0;
 
-static void
+static BOOL
 handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	if (cmd_submit->ep == 0x01) {
@@ -215,7 +215,7 @@ handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 			//input
 			printf("direction=input\n");
 			if (!recv_data(vstub, (char *)buffer, cmd_submit->transfer_buffer_length))
-				return;
+				return FALSE;
 			bsize = cmd_submit->transfer_buffer_length;
 			reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 			buffer[bsize + 1] = 0; //string terminator
@@ -227,6 +227,7 @@ handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		//not supported
 		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 		usleep(500);
+		return TRUE;
 	}
 	else if (cmd_submit->ep == 0x02) {
 		printf("EP2 received \n");
@@ -237,7 +238,7 @@ handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 
 			printf("direction=input\n");
 			if (!recv_data(vstub, (char *)buffer, cmd_submit->transfer_buffer_length))
-				return;
+				return FALSE;
 			bsize = cmd_submit->transfer_buffer_length;
 			reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 			buffer[bsize + 1] = 0; //string terminator
@@ -268,7 +269,9 @@ handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 				printf("no data disponible\n");
 			}
 		}
+		return TRUE;
 	}
+	return FALSE;
 }
 
 typedef struct _LINE_CODING
@@ -282,13 +285,13 @@ typedef struct _LINE_CODING
 LINE_CODING linec;
 unsigned short linecs = 0;
 
-static void
+static BOOL
 handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
 
         if (setup_pkt->bmRequestType != 0x21)
-		return;
+		return FALSE;
 
 	//Abstract Control Model Requests
 	switch (setup_pkt->bRequest) {
@@ -296,7 +299,7 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		//SET_LINE_CODING
 		printf("SET_LINE_CODING\n");
 		if (!(recv_data(vstub, (char *)&linec, setup_pkt->wLength)))
-			return;
+			return FALSE;
 		
 		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 		break;
@@ -319,8 +322,9 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 		break;
 	default:
-		break;
+		return FALSE;
 	}
+	return TRUE;
 }
 
 vstubmod_t	vstubmod_cdc_acm = {

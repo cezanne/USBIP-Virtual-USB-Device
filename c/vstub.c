@@ -162,8 +162,10 @@ handle_control_transfer_common(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		case 0x06:
 			return handle_get_descriptor(vstub, cmd_submit);
 		case 0x00:
-			if (vstub->mod->handler_get_status)
-				vstub->mod->handler_get_status(vstub, cmd_submit);
+			if (vstub->mod->handler_get_status) {
+				if (!vstub->mod->handler_get_status(vstub, cmd_submit))
+					error("unhandlded get status");
+			}
 			else
 				handle_get_status(vstub, cmd_submit);
 			return TRUE;
@@ -197,10 +199,12 @@ handle_cmd_submit(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 	if (cmd_submit->ep == 0) {
 		if (handle_control_transfer_common(vstub, cmd_submit))
 			return;
-		vstub->mod->handler_control_transfer(vstub, cmd_submit);
+		if (!vstub->mod->handler_control_transfer(vstub, cmd_submit))
+			error("unhandled control transfer");
 	}
 	else {
-		vstub->mod->handler_non_control_transfer(vstub, cmd_submit);
+		if (!vstub->mod->handler_non_control_transfer(vstub, cmd_submit))
+			error("unhandled non-control transfer");
 	}
 }
 

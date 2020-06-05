@@ -123,7 +123,7 @@ const byte mouse_report[0x34] = {
 	0xC0, 0xC0
 };
 
-static void
+static BOOL
 handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
         // Sending random mouse data
@@ -141,9 +141,10 @@ handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		usleep(250000);
 	}
 	count++;
+	return TRUE;
 }
 
-static void
+static BOOL
 handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
@@ -155,6 +156,7 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		// send initial report
 		printf("send initial report\n");
 		reply_cmd_submit(vstub, cmd_submit, (char *)mouse_report, 0x34);
+		return TRUE;
 	}
         if (setup_pkt->bmRequestType == 0x21 &&
 	    setup_pkt->bRequest == 0x0a) {
@@ -163,7 +165,9 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		printf("Idle\n");
 		// Idle
 		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
+		return TRUE;
 	}
+	return FALSE;
 }
 
 vstubmod_t	vstubmod_hid_mouse = {

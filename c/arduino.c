@@ -38,14 +38,14 @@ static bulk_reply_data_t	bulk_reply_data[30] = {
 	{ { 0x0a, 0x00 }, 2 },
 };
 
-static void
+static BOOL
 handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	if (cmd_submit->ep == 0 && !cmd_submit->direction) {
 		char	data[1024];
 		if (!recv_data(vstub, data, cmd_submit->transfer_buffer_length)) {
 			error("failed to recv bulk out data");
-			return;
+			return FALSE;
 		}
 		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
 	}
@@ -56,11 +56,12 @@ handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		n_bulks++;
 	}
 	else {
-		error("unhandled non-control");
+		return FALSE;
 	}
+	return TRUE;
 }
 
-static void
+static BOOL
 handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
@@ -80,17 +81,19 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		}
 	}
 	else {
-		error("unhandled control transfer");
+		return FALSE;
 	}
+	return TRUE;
 }
 
-static void
+static BOOL
 arduino_handle_get_status(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	char	data[2] = { 0x64, 0x04 };
 
 	reply_cmd_submit(vstub, cmd_submit, data, 2);
-	printf("GET_STATUS\n");	
+	printf("GET_STATUS\n");
+	return TRUE;
 }
 
 vstubmod_t	vstubmod_arduino = {

@@ -99,7 +99,7 @@ static intr_reply_data_t	intr_reply_data[30] = {
 	{ { 0x0e, 0x04, 0x01, 0x24, 0x0c, 0x00 }, 6 },
 };
 
-static void
+static BOOL
 handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	if (cmd_submit->direction) {
@@ -107,20 +107,21 @@ handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 			if (cnt_bulk_in < 3) {
 				cnt_bulk_in++;
 				printf("bulk: %d\n", cnt_bulk_in);
-				return;
+				return TRUE;
 			}
 		}
 		else if (cmd_submit->ep == 1) {
 			intr_cmd_submits[cnt_intr_in] = clone_cmd_submit(cmd_submit);
 			cnt_intr_in++;
 			printf("intr: %d\n", cnt_intr_in);
-			return;
+			return TRUE;
 		}
 	}
-	printf("unhandled non-control\n");
+
+	return FALSE;
 }
 
-static void
+static BOOL
 handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
@@ -138,7 +139,7 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		if (!recv_data(vstub, data, cmd_submit->transfer_buffer_length)) {
 			error("invalid format");
 			free(data);
-			return;
+			return FALSE;
 		}
 		free(data);
 		reply_cmd_submit(vstub, cmd_submit, NULL, 0);
@@ -147,7 +148,11 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		reply_cmd_submit(vstub, cmd_reply, reply_data->data, reply_data->datalen);
 		free(cmd_reply);
 		cnt_intr_reply++;
+
+		return TRUE;
 	}
+
+	return TRUE;
 }
 
 vstubmod_t	vstubmod_bth = {

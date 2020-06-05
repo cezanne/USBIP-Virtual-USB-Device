@@ -125,7 +125,7 @@ const byte keyboard_report[0x3F]={
 	0xC0
 };  			//End Collection 
 
-static void
+static BOOL
 handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
         // Sending random keyboard data
@@ -142,9 +142,11 @@ handle_non_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 	}
 	usleep(250000);
 	count++;
+
+	return TRUE;
 }
 
-static void
+static BOOL
 handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
@@ -154,6 +156,7 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 		if (setup_pkt->bRequest == 0x6 && setup_pkt->wValue.hiByte == 0x22) { // send initial report
 			printf("send initial report\n");
 			reply_cmd_submit(vstub, cmd_submit, (char *)keyboard_report, 0x3F);
+			return TRUE;
 		}
 		break;
 	case 0x21:
@@ -162,6 +165,7 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 			printf("Idle\n");
 			// Idle
 			reply_cmd_submit(vstub, cmd_submit, NULL, 0);
+			return TRUE;
 		}
 		else if (setup_pkt->bRequest == 0x09) { // set report
 			char	data[20];
@@ -170,13 +174,15 @@ handle_control_transfer(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 
 			if (!recv_data(vstub, data, setup_pkt->wLength)) {
 				printf ("receive error: %s \n", strerror (errno));
-				return;
+				return TRUE;
 			}
 			reply_cmd_submit(vstub, cmd_submit, NULL, 0);
+			return TRUE;
 		}
 	default:
 		break;
         }
+	return FALSE;
 }
 
 vstubmod_t	vstubmod_hid_keyboard = {

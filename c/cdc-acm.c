@@ -153,52 +153,7 @@ static const CONFIG_CDC  configuration_cdc = {
 	}
 };
 
-static const unsigned char string_0[] = { // available languages  descriptor
-	0x04,
-	USB_DESCRIPTOR_STRING,
-	0x09,
-	0x04
-};
-
-static const unsigned char string_1[] = { //
-	0x0A,
-	USB_DESCRIPTOR_STRING, // bLength, bDscType
-	'T', 0x00, //
-	'e', 0x00, //
-	's', 0x00, //
-	't', 0x00, //
-};
-
-static const unsigned char string_2[] = { //
-	0x10,
-	USB_DESCRIPTOR_STRING, //
-	'U', 0x00, //
-	'S', 0x00, //
-	'B', 0x00, //
-	' ', 0x00, //
-	'C', 0x00, //
-	'D', 0x00, //
-	'C', 0x00, //
-};
-
-static const unsigned char string_3[] = { //
-	0x18,
-	USB_DESCRIPTOR_STRING, //
-	'V', 0x00, //
-	'i', 0x00, //
-	'r', 0x00, //
-	't', 0x00, //
-	'u', 0x00, //
-	'a', 0x00, //
-	'l', 0x00, //
-	' ', 0x00, //
-	'U', 0x00, //
-	'S', 0x00, //
-	'B', 0x00, //
-};
-
-///DEL static const USB_INTERFACE_DESCRIPTOR *interfaces[]={ &configuration_cdc.dev_int0, &configuration_cdc.dev_int1};
-static const unsigned char *strings[] = {string_0, string_1, string_2, string_3};
+static const char *strings[] = { "Test", "USB CDC", "Virtual USB" };
 
 #define BSIZE 64
 

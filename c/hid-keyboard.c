@@ -85,8 +85,7 @@ static const CONFIG_HID  configuration_hid={{
     0xFF                        //Interval
 }};
 
-///DEL const USB_INTERFACE_DESCRIPTOR *interfaces[]={ &configuration_hid.dev_int };
-static const unsigned char *strings[]={};
+static const char	*strings[] = {};
 static const USB_DEVICE_QUALIFIER_DESCRIPTOR  dev_qua={};
 
 //Class specific descriptor - HID keyboard

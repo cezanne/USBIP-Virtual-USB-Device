@@ -81,19 +81,44 @@ static void
 handle_get_descriptor_string(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 {
 	setup_pkt_t	*setup_pkt = (setup_pkt_t *)cmd_submit->setup;
-	char	str[255];
-	int	i, len;
+	const char	*str;
+	int	id_str, len_dsc, len_trans_buf;
 
-	memset(str, 0, 255);
+	id_str = setup_pkt->wValue.lowByte;
+	if (id_str == 0) {
+		/* return a supported language code. currently support only english(0x409) */
+		char	supported_langs[] = { 0x04, USB_DESCRIPTOR_STRING, 0x09, 0x04 };
 
-	len = cmd_submit->transfer_buffer_length;
-	if (len > *vstub->mod->strings[setup_pkt->wValue.lowByte])
-		len = *vstub->mod->strings[setup_pkt->wValue.lowByte];
-	for (i = 0; i < len / 2 - 1; i++)
-		str[i] = vstub->mod->strings[setup_pkt->wValue.lowByte][i * 2 + 2];
+		reply_cmd_submit(vstub, cmd_submit, supported_langs, 4);
+		printf(" get string descriptor: supported langs\n");
+		return;
+	}
 
-	printf(" get_descriptor_string: %s\n", str);
-	reply_cmd_submit(vstub, cmd_submit, (char *)vstub->mod->strings[setup_pkt->wValue.lowByte], len);
+	len_trans_buf = cmd_submit->transfer_buffer_length;
+
+	/* CAUTION: seg fault may occur if there's no matching string in string table of a vstub mod */
+	str = vstub->mod->strings[id_str - 1];
+
+	len_dsc = strlen(str) * 2 + 2;
+	if (len_trans_buf < len_dsc) {
+		error("too small transfer buffer: %d < %d", len_trans_buf, len_dsc);
+		reply_cmd_submit_err(vstub, cmd_submit, -1);
+	}
+	else {
+		char	dsc_str[255];
+		int	i;
+
+		dsc_str[0] = len_dsc;
+		dsc_str[1] = 0x3;
+
+		/* unicode string for ascii */
+		for (i = 0; str[i]; i++) {
+			dsc_str[i * 2 + 2] = str[i];
+			dsc_str[i * 2 + 2 + 1] = 0;
+		}
+		printf(" get string descriptor: %s\n", str);
+		reply_cmd_submit(vstub, cmd_submit, dsc_str, len_dsc);
+	}
 }
 
 static BOOL

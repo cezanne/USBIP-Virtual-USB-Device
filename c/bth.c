@@ -57,8 +57,7 @@ const char	configuration_bth[] = {
 	0x00, 0x07, 0x21, 0x05, 0x88, 0x13, 0x40, 0x00
 };
 
-///DEL const USB_INTERFACE_DESCRIPTOR	*interfaces[] = { };
-static const unsigned char	*strings[] = {};
+static const char	*strings[] = { "ASUS", "Bluetooth Dongle", "No serial", "test" };
 static const USB_DEVICE_QUALIFIER_DESCRIPTOR	dev_qua = {};
 
 typedef struct {

@@ -25,8 +25,7 @@ static const char	configuration_avrmkii[] = {
 	0x00, 0x00, 0x07, 0x05, 0x82, 0x02, 0x40, 0x00, 0x0a, 0x07, 0x05, 0x02, 0x02, 0x40, 0x00, 0x0a
 };
 
-///DEL const USB_INTERFACE_DESCRIPTOR	*interfaces[] = { };
-static const unsigned char	*strings[] = { NULL };
+static const char	*strings[] = { "microchip", "avrmkii", "J41800020871" };
 static const USB_DEVICE_QUALIFIER_DESCRIPTOR	dev_qua = {};
 
 typedef struct {

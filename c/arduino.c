@@ -20,7 +20,7 @@ static const char	configuration_arduino[] = {
 };
 
 ///DEL const USB_INTERFACE_DESCRIPTOR	*interfaces[] = { };
-static const unsigned char	*strings[] = { NULL };
+static const char	*strings[] = { NULL };
 static const USB_DEVICE_QUALIFIER_DESCRIPTOR	dev_qua = {};
 
 typedef struct {

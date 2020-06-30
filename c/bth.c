@@ -16,7 +16,7 @@ static const USB_DEVICE_DESCRIPTOR dev_dsc = {
 	0xe0,                   // Class Code
 	0x01,                   // Subclass code
 	0x01,                   // Protocol code
-	0x64,                   // Max packet size for EP0, see usb_config.h
+	0x40,                   // Max packet size for EP0, see usb_config.h
 	0x0b05,                 // Vendor ID
 	0x1715,                 // Product ID: Mouse in a circle fw demo
 	0x0100,                 // Device release number in BCD format

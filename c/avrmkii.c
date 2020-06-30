@@ -11,7 +11,7 @@ typedef struct __attribute__ ((__packed__))
 /* Device Descriptor */
 static const USB_DEVICE_DESCRIPTOR	dev_dsc = {
 	0x12, 0x01,
-	0x1001,
+	0x0110,
 	0xff, 0x00, 0x00, 0x10,
 	0xeb03,
 	0x0421,

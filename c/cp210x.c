@@ -4,7 +4,7 @@
 static const USB_DEVICE_DESCRIPTOR dev_dsc = {
 	0x12,                   // Size of this descriptor in bytes
 	0x01,                   // DEVICE descriptor type
-	0x1001,                 // USB Spec Release Number in BCD format
+	0x0110,                 // USB Spec Release Number in BCD format
 	0x00,                   // Class Code
 	0x00,                   // Subclass code
 	0x00,                   // Protocol code

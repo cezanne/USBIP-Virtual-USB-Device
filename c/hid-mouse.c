@@ -89,7 +89,6 @@ static const CONFIG_HID configuration_hid = {
 	}
 };
 
-static const char	*strings[] = {};
 static const USB_DEVICE_QUALIFIER_DESCRIPTOR	dev_qua = {};
 
 //Class specific descriptor - HID mouse
@@ -175,7 +174,8 @@ vstubmod_t	vstubmod_hid_mouse = {
 	&dev_dsc,
 	&dev_qua,
 	(CONFIG_GEN *)&configuration_hid,
-	strings,
+	0,
+	NULL,
 	NULL,
 	handle_control_transfer,
 	handle_non_control_transfer

@@ -96,8 +96,17 @@ handle_get_descriptor_string(vstub_t *vstub, USBIP_CMD_SUBMIT *cmd_submit)
 
 	len_trans_buf = cmd_submit->transfer_buffer_length;
 
-	/* CAUTION: seg fault may occur if there's no matching string in string table of a vstub mod */
+	if (id_str <= 0 || id_str > vstub->mod->n_strings) {
+		reply_cmd_submit_err(vstub, cmd_submit, -1);
+		printf(" invalid string id: %d\n", id_str);
+		return;
+	}
 	str = vstub->mod->strings[id_str - 1];
+	if (str == NULL) {
+		reply_cmd_submit_err(vstub, cmd_submit, -1);
+		printf(" empty string: id: %d\n", id_str);
+		return;
+	}
 
 	len_dsc = strlen(str) * 2 + 2;
 	if (len_trans_buf < len_dsc) {

@@ -44,6 +44,7 @@ typedef struct _vstubmod {
 	const USB_DEVICE_DESCRIPTOR	*dev_dsc;
 	const USB_DEVICE_QUALIFIER_DESCRIPTOR	*dev_qua;
 	const CONFIG_GEN	*conf;
+	unsigned	n_strings;
 	const char	**strings;
 	handler_t	handler_get_status;
 	handler_t	handler_control_transfer;

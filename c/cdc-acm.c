@@ -288,6 +288,7 @@ vstubmod_t	vstubmod_cdc_acm = {
 	&dev_dsc,
 	&dev_qua,
 	(CONFIG_GEN *)&configuration_cdc,
+	3,
 	strings,
 	NULL,
 	handle_control_transfer,

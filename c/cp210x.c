@@ -100,6 +100,7 @@ vstubmod_t	vstubmod_cp210x = {
 	&dev_dsc,
 	&dev_qua,
 	(CONFIG_GEN *)&configuration_cp210x,
+	4,
 	strings,
 	NULL,
 	handle_control_transfer,

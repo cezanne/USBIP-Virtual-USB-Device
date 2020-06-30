@@ -78,6 +78,7 @@ vstubmod_t	vstubmod_avrmkii = {
 	&dev_dsc,
 	&dev_qua,
 	(CONFIG_GEN *)&configuration_avrmkii,
+	3,
 	strings,
 	NULL,
 	handle_control_transfer,

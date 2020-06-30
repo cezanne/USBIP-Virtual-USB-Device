@@ -20,7 +20,6 @@ static const char	configuration_arduino[] = {
 };
 
 ///DEL const USB_INTERFACE_DESCRIPTOR	*interfaces[] = { };
-static const char	*strings[] = { NULL };
 static const USB_DEVICE_QUALIFIER_DESCRIPTOR	dev_qua = {};
 
 typedef struct {
@@ -102,7 +101,8 @@ vstubmod_t	vstubmod_arduino = {
 	&dev_dsc,
 	&dev_qua,
 	(CONFIG_GEN *)&configuration_arduino,
-	strings,
+	0,
+	NULL,
 	arduino_handle_get_status,
 	handle_control_transfer,
 	handle_non_control_transfer

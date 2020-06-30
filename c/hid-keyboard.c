@@ -85,7 +85,6 @@ static const CONFIG_HID  configuration_hid={{
     0xFF                        //Interval
 }};
 
-static const char	*strings[] = {};
 static const USB_DEVICE_QUALIFIER_DESCRIPTOR  dev_qua={};
 
 //Class specific descriptor - HID keyboard
@@ -190,7 +189,8 @@ vstubmod_t	vstubmod_hid_keyboard = {
 	&dev_dsc,
 	&dev_qua,
 	(CONFIG_GEN *)&configuration_hid,
-	strings,
+	0,
+	NULL,
 	NULL,
 	handle_control_transfer,
 	handle_non_control_transfer

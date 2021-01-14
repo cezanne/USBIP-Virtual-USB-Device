@@ -275,7 +275,7 @@ typedef struct  __attribute__ ((__packed__)) _OP_REP_IMPORT
 	byte	bNumInterfaces;
 } OP_REP_IMPORT;
 
-typedef struct  __attribute__ ((__packed__)) _USBIP_CMD_SUBMIT
+typedef struct  __attribute__ ((__packed__,aligned)) _USBIP_CMD_SUBMIT
 {
 	int	command;
 	int	seqnum;
@@ -303,7 +303,7 @@ typedef struct  __attribute__ ((__packed__)) _USBIP_CMD_SUBMIT
 +  URB_DIR_MASK            | 0x00000200 | yes     | yes       | yes      | yes
 */
 
-typedef struct  __attribute__ ((__packed__)) _USBIP_RET_SUBMIT
+typedef struct  __attribute__ ((__packed__,aligned)) _USBIP_RET_SUBMIT
 {
 	int	command;
 	int	seqnum;
@@ -318,7 +318,7 @@ typedef struct  __attribute__ ((__packed__)) _USBIP_RET_SUBMIT
 	byte	setup[8];
 } USBIP_RET_SUBMIT;
 
-typedef struct  __attribute__ ((__packed__)) _USBIP_CMD_UNLINK
+typedef struct  __attribute__ ((__packed__,aligned)) _USBIP_CMD_UNLINK
 {
 	int	command;
 	int	seqnum;
@@ -328,7 +328,7 @@ typedef struct  __attribute__ ((__packed__)) _USBIP_CMD_UNLINK
 	int	seqnum_urb;
 } USBIP_CMD_UNLINK;
 
-typedef struct __attribute__ ((__packed__)) _USBIP_RET_UNLINK
+typedef struct __attribute__ ((__packed__,aligned)) _USBIP_RET_UNLINK
 {
 	int	command;
 	int	seqnum;
